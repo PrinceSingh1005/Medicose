@@ -1,0 +1,71 @@
+[
+    {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2d1" },
+    "user": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c3" },
+    "specialization": "Cardiologist",
+    "qualifications": ["MBBS", "MD Cardiology"],
+    "experience": 12,
+    "fees": 80,
+    "address": "123 Heartbeat Ave",
+    "city": "New York",
+    "state": "NY",
+    "country": "USA",
+    "phone": "+12125551234",
+    "bio": "Dr. Emily White is a highly experienced cardiologist specializing in heart disease prevention and treatment.",
+    "availability": {
+      "Monday": ["09:00", "17:00"],
+      "Wednesday": ["10:00", "18:00"],
+      "Friday": ["09:00", "15:00"]
+    },
+    "medicalLicense": "https://example.com/licenses/emily_white_license.pdf",
+    "averageRating": 4.8,
+    "numReviews": 15,
+    "createdAt": { "$date": "2024-03-01T09:00:00Z" },
+    "updatedAt": { "$date": "2024-03-01T09:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2d2" },
+    "user": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c4" },
+    "specialization": "Pediatrician",
+    "qualifications": ["MBBS", "MD Pediatrics"],
+    "experience": 8,
+    "fees": 65,
+    "address": "456 Kids Health Rd",
+    "city": "Los Angeles",
+    "state": "CA",
+    "country": "USA",
+    "phone": "+13105555678",
+    "bio": "Dr. Michael Brown is a compassionate pediatrician dedicated to children's health and well-being.",
+    "availability": {
+      "Tuesday": ["08:30", "16:30"],
+      "Thursday": ["09:00", "17:00"]
+    },
+    "medicalLicense": "https://example.com/licenses/michael_brown_license.pdf",
+    "averageRating": 4.5,
+    "numReviews": 10,
+    "createdAt": { "$date": "2024-03-10T14:00:00Z" },
+    "updatedAt": { "$date": "2024-03-10T14:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2d3" },
+    "user": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c5" },
+    "specialization": "Dermatologist",
+    "qualifications": ["MBBS", "MD Dermatology"],
+    "experience": 5,
+    "fees": 70,
+    "address": "789 Skin Care Blvd",
+    "city": "Chicago",
+    "state": "IL",
+    "country": "USA",
+    "phone": "+17735559012",
+    "bio": "Dr. Sarah Green specializes in skin conditions and cosmetic dermatology.",
+    "availability": {
+      "Monday": ["10:00", "16:00"]
+    },
+    "medicalLicense": "https://example.com/licenses/sarah_green_license.pdf",
+    "averageRating": 0,
+    "numReviews": 0,
+    "createdAt": { "$date": "2024-04-05T16:00:00Z" },
+    "updatedAt": { "$date": "2024-04-05T16:00:00Z" }
+  }
+]

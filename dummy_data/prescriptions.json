@@ -1,0 +1,25 @@
+[
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2f1" },
+    "patient": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c1" },
+    "doctor": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c4" },
+    "appointment": { "$oid": "66a4a7a0f8e3c9d7b0a1b2e3" },
+    "medicines": [
+      {
+        "name": "Paracetamol",
+        "dosage": "500mg, 1 tablet 3 times a day",
+        "instructions": "Take after food for 3 days."
+      },
+      {
+        "name": "Amoxicillin",
+        "dosage": "250mg, 1 capsule twice a day",
+        "instructions": "Complete the course of 7 days."
+      }
+    ],
+    "diagnosis": "Viral fever with mild cough.",
+    "notes": "Advised plenty of fluids and rest. Follow up if symptoms worsen.",
+    "eSignature": "Dr. Michael Brown",
+    "createdAt": { "$date": "2024-07-20T09:45:00Z" },
+    "updatedAt": { "$date": "2024-07-20T09:45:00Z" }
+  }
+]

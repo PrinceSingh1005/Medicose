@@ -1,0 +1,20 @@
+[
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b301" },
+    "patient": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c1" },
+    "doctor": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c3" },
+    "rating": 5,
+    "comment": "Dr. White was very thorough and empathetic. Highly recommend!",
+    "createdAt": { "$date": "2024-07-26T15:00:00Z" },
+    "updatedAt": { "$date": "2024-07-26T15:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b302" },
+    "patient": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c2" },
+    "doctor": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c4" },
+    "rating": 4,
+    "comment": "Dr. Brown was good with my child. Explained everything clearly.",
+    "createdAt": { "$date": "2024-07-21T10:00:00Z" },
+    "updatedAt": { "$date": "2024-07-21T10:00:00Z" }
+  }
+]

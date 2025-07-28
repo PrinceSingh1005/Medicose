@@ -1,0 +1,62 @@
+[
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c1" },
+    "name": "Alice Smith",
+    "email": "alice.smith@example.com",
+    "password": "$2a$10$m5c3L5Er4.z5K/4vknm1l.TwHHq2AvqzvcN3iAT63UPOLNTHTjvaG",
+    "role": "patient",
+    "isVerified": true,
+    "createdAt": { "$date": "2024-01-15T10:00:00Z" },
+    "updatedAt": { "$date": "2024-01-15T10:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c2" },
+    "name": "Bob Johnson",
+    "email": "bob.johnson@example.com",
+    "password": "$2a$10$m5c3L5Er4.z5K/4vknm1l.TwHHq2AvqzvcN3iAT63UPOLNTHTjvaG",
+    "role": "patient",
+    "isVerified": true,
+    "createdAt": { "$date": "2024-02-20T11:00:00Z" },
+    "updatedAt": { "$date": "2024-02-20T11:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c3" },
+    "name": "Dr. Emily White",
+    "email": "emily.white@medicose.com",
+    "password": "$2a$10$HstYCIgLnOYFYjsN7dQUD.adm.Hhrx12WfYnOcl0dm8FFzWINimxy",
+    "role": "doctor",
+    "isVerified": true,
+    "createdAt": { "$date": "2024-03-01T09:00:00Z" },
+    "updatedAt": { "$date": "2024-03-01T09:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c4" },
+    "name": "Dr. Michael Brown",
+    "email": "michael.brown@medicose.com",
+    "password": "$2a$10$HstYCIgLnOYFYjsN7dQUD.adm.Hhrx12WfYnOcl0dm8FFzWINimxy",
+    "role": "doctor",
+    "isVerified": true,
+    "createdAt": { "$date": "2024-03-10T14:00:00Z" },
+    "updatedAt": { "$date": "2024-03-10T14:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c5" },
+    "name": "Dr. Sarah Green (Pending)",
+    "email": "sarah.green@medicose.com",
+    "password": "$2a$10$HstYCIgLnOYFYjsN7dQUD.adm.Hhrx12WfYnOcl0dm8FFzWINimxy",
+    "role": "doctor",
+    "isVerified": false,
+    "createdAt": { "$date": "2024-04-05T16:00:00Z" },
+    "updatedAt": { "$date": "2024-04-05T16:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "66a4a7a0f8e3c9d7b0a1b2c6" },
+    "name": "Admin User",
+    "email": "admin@medicose.com",
+    "password": "$2a$10$qkaKpbdD7QwJi0EFJ9hNM.TV9nItI3K7FoEBPjh7umB6cLYmQUFMe",
+    "role": "admin",
+    "isVerified": true,
+    "createdAt": { "$date": "2024-01-01T08:00:00Z" },
+    "updatedAt": { "$date": "2024-01-01T08:00:00Z" }
+  }
+]
