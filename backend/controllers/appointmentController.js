@@ -2,6 +2,33 @@ const asyncHandler = require('express-async-handler');
 const Appointment = require('../models/Appointment');
 const DoctorProfile = require('../models/DoctorProfile');
 const User = require('../models/User'); // For fetching user details
+const Prescription = require('../models/Prescription'); // Assuming you have this model
+
+// @desc    Get a single appointment by ID
+// @route   GET /api/appointments/:id
+// @access  Private (Patient or Doctor involved in the appointment)
+const getAppointmentById = asyncHandler(async (req, res) => {
+    const appointment = await Appointment.findById(req.params.id)
+        .populate('patient', 'name email')
+        .populate('doctor', 'name email');
+
+    if (!appointment) {
+        res.status(404);
+        throw new Error('Appointment not found');
+    }
+
+    // Check if the logged-in user is either the patient or the doctor for this appointment
+    const isPatient = appointment.patient._id.toString() === req.user._id.toString();
+    const isDoctor = appointment.doctor._id.toString() === req.user._id.toString();
+
+    if (!isPatient && !isDoctor) {
+        res.status(403);
+        throw new Error('User not authorized to view this appointment');
+    }
+
+    res.json(appointment);
+});
+
 
 // @desc    Book a new appointment
 // @route   POST /api/appointments
@@ -197,6 +224,7 @@ const handlePaymentSuccess = asyncHandler(async (req, res) => {
 
 
 module.exports = {
+    getAppointmentById,
     bookAppointment,
     getDoctorAppointments,
     updateAppointmentStatus,
