@@ -1,8 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const DoctorProfile = require('../models/DoctorProfile');
-const User = require('../models/User'); // To check if user is a doctor
-const Prescription = require('../models/Prescription'); 
-
+const User = require('../models/User');
+const Prescription = require('../models/Prescription'); // Added for getDoctorPrescriptions
 
 // @desc    Get all doctors (with search and filters)
 // @route   GET /api/doctors
@@ -10,44 +9,59 @@ const Prescription = require('../models/Prescription');
 const getDoctors = asyncHandler(async (req, res) => {
     const { specialization, location, minRating, sortBy, search } = req.query;
 
-    let query = {};
+    let doctorProfileFilter = {}; // Filters that apply to DoctorProfile model
+    let userFilter = { role: 'doctor', isVerified: true }; // Base filters for User model (only verified doctors)
 
-    // Filter by specialization
+    // 1. Build filters for DoctorProfile
     if (specialization) {
-        query.specialization = { $regex: specialization, $options: 'i' }; // Case-insensitive search
+        doctorProfileFilter.specialization = { $regex: specialization, $options: 'i' }; // Case-insensitive search
     }
-
-    // Filter by location (city, state, country)
     if (location) {
-        query.$or = [
+        // Use $or for location to search across city, state, or country
+        doctorProfileFilter.$or = [
             { city: { $regex: location, $options: 'i' } },
             { state: { $regex: location, $options: 'i' } },
             { country: { $regex: location, $options: 'i' } },
         ];
     }
-
-    // Filter by minimum rating
     if (minRating) {
-        query.averageRating = { $gte: parseFloat(minRating) };
+        doctorProfileFilter.averageRating = { $gte: parseFloat(minRating) };
     }
 
-    // Search by doctor name (requires joining with User model)
-    let userQuery = { role: 'doctor', isVerified: true }; // Only verified doctors
+    // 2. Build filters for User (doctor's name search)
     if (search) {
-        userQuery.name = { $regex: search, $options: 'i' };
+        userFilter.name = { $regex: search, $options: 'i' };
     }
 
-    const doctors = await User.find(userQuery)
-        .select('-password')
-        .populate({
-            path: 'doctorProfile', // Populate the doctorProfile field from the User model (if added)
-            match: query, // Apply profile-specific filters here
-        });
+    // 3. If there are any filters for DoctorProfile, find the corresponding DoctorProfile IDs
+    let finalUserQuery = { ...userFilter }; // Start with base user filters
 
-    // Filter out users who don't have a matching doctor profile
+    if (Object.keys(doctorProfileFilter).length > 0) {
+        const matchingProfiles = await DoctorProfile.find(doctorProfileFilter).select('_id');
+        const matchingProfileIds = matchingProfiles.map(profile => profile._id);
+
+        // If no doctor profiles match the criteria, then no users will match either
+        if (matchingProfileIds.length === 0) {
+            return res.json([]); // Return empty array early
+        }
+
+        // Add the found doctorProfile IDs to the final user query
+        // This ensures that the user's doctorProfile field matches one of the found profile IDs
+        finalUserQuery.doctorProfile = { $in: matchingProfileIds };
+    }
+
+    // 4. Find Users based on the combined filters and populate their profiles
+    // Use finalUserQuery which now correctly combines all conditions
+    const doctors = await User.find(finalUserQuery)
+        .select('-password')
+        .populate('doctorProfile');
+
+    // Filter out users who don't have a populated doctorProfile (should be rare with correct data)
+    // or if the population somehow failed.
     const filteredDoctors = doctors.filter(doc => doc.doctorProfile);
 
-    // Sorting logic
+
+    // 5. Apply sorting logic (remains the same)
     let sortedDoctors = filteredDoctors;
     if (sortBy) {
         if (sortBy === 'feesAsc') {
@@ -133,6 +147,7 @@ const getDoctorPrescriptions = asyncHandler(async (req, res) => {
 
     res.json(prescriptions);
 });
+
 
 module.exports = {
     getDoctors,

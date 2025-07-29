@@ -27,11 +27,7 @@ const userSchema = mongoose.Schema({
     // NEW FIELD: Reference to DoctorProfile for 'doctor' role users
     doctorProfile: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DoctorProfile', // Refers to the 'DoctorProfile' model
-        required: function() { return this.role === 'doctor'; } // Only required if the user is a doctor
-        // Note: For initial creation, this might be null and then populated by authController.
-        // The `authController` already creates an empty DoctorProfile for new doctors.
-        // We will need to update `authController` to link this profile back to the user.
+        ref: 'DoctorProfile', 
     },
 }, {
     timestamps: true, // Adds createdAt and updatedAt timestamps

@@ -8,7 +8,7 @@ import DoctorSearchPage from './pages/DoctorSearchPage';
 import DoctorDetailsPage from './pages/DoctorDetailsPage';
 import PatientDashboard from './pages/PatientDashboard';
 import AppointmentBookingPage from './pages/AppointmentBookingPage';
-// import VideoCallPage from './pages/VideoCallPage';
+import VideoCallPage from './pages/VideoCallPage';
 import PrescriptionPage from './pages/PrescriptionPage';
 import ProfilePage from './pages/ProfilePage';
 import PrivateRoute from './components/PrivateRoute';
@@ -36,7 +36,7 @@ const App = () => {
             <Route element={<PrivateRoute allowedRoles={['patient']} />} >
               <Route path="/patient/dashboard" element={<PatientDashboard />} />
               <Route path="/book-appointment/:doctorId" element={<AppointmentBookingPage />} />
-              {/* <Route path="/video-call/:appointmentId" element={<VideoCallPage />} /> */}
+              <Route path="/video-call/:appointmentId" element={<VideoCallPage />} />
               <Route path="/prescriptions/:prescriptionId" element={<PrescriptionPage />} />
               <Route path="/patient/profile" element={<ProfilePage />} />
             </Route>
