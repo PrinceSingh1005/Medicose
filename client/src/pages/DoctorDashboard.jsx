@@ -4,7 +4,7 @@ import axios from '../api/axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Message from '../components/Message';
 import { Link } from 'react-router-dom';
-import { CalendarDaysIcon, CheckCircleIcon, XCircleIcon, VideoCameraIcon, ClipboardDocumentIcon, ClipboardDocumentListIcon} from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, CheckCircleIcon, XCircleIcon, VideoCameraIcon, ClipboardDocumentIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 
 function DoctorDashboard() {
   const { userInfo } = useSelector((state) => state.auth);
@@ -16,6 +16,7 @@ function DoctorDashboard() {
     try {
       setLoading(true);
       const { data } = await axios.get('/appointments/doctor');
+      console.log(data);
       setAppointments(data);
       setLoading(false);
     } catch (err) {
@@ -90,12 +91,11 @@ function DoctorDashboard() {
                       {appt.consultationType}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        appt.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        appt.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        appt.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${appt.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          appt.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            appt.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                              'bg-red-100 text-red-800'
+                        }`}>
                         {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
                       </span>
                     </td>
@@ -121,7 +121,7 @@ function DoctorDashboard() {
                         )}
                         {appt.status === 'confirmed' && appt.consultationType === 'video' && (
                           <Link
-                            to={`/video-call/${appt._id}`} // Doctor can also join the call
+                            to={`/doctor/video-call/${appt._id}`} // Doctor can also join the call
                             className="text-primary hover:text-indigo-700"
                             title="Join Video Call"
                           >

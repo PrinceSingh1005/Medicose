@@ -45,6 +45,7 @@ const App = () => {
             <Route element={<PrivateRoute allowedRoles={['doctor']} />}>
               <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
               <Route path="/doctor/profile" element={<ProfilePage />} />
+              <Route path="/doctor/video-call/:appointmentId" element={<VideoCallPage />} />
               <Route path="/doctor/create-prescription/:appointmentId" element={<CreatePrescriptionPage />} />
               <Route path="/doctor/prescriptions" element={<DoctorPrescriptionsPage />} />
             </Route>
