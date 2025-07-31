@@ -35,6 +35,7 @@ const patientRoutes = require('./routes/patientRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const Appointment = require('./models/Appointment');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);
@@ -53,10 +54,19 @@ io.on('connection', (socket) => {
     console.log(`✅ [Connect] User connected: ${socket.id}`);
 
     // Event for the DOCTOR to create and join the meeting room
-    socket.on('doctor:join_room', ({ appointmentId }) => {
+    socket.on('doctor:join_room', async ({ appointmentId }) => {
+        await Appointment.findByIdAndUpdate(appointmentId, { meetingStatus: 'active' });
         socket.join(appointmentId);
         socket.data.roomId = appointmentId; // Store room ID on the socket object for later use
         console.log(`👨‍⚕️ [Doctor Joined] Doctor ${socket.id} created and joined room: ${appointmentId}`);
+    });
+
+    // Add a new event for leaving the meeting
+    socket.on('meeting:leave', async ({ appointmentId }) => {
+        await Appointment.findByIdAndUpdate(appointmentId, { meetingStatus: 'ended' });
+        // Notify the other user that the meeting has officially ended
+        socket.to(appointmentId).emit('meeting:has_ended');
+        console.log(`👋 [Meeting Ended] Meeting ${appointmentId} has been ended.`);
     });
 
     // Event for the PATIENT to request entry into the meeting

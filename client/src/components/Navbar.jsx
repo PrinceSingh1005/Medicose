@@ -36,7 +36,11 @@ function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+            {userInfo?(
+              ''
+            ):(
             <NavLink to="/" icon={<HomeIcon />} label="Home" />
+          )}
             <NavLink to="/doctors" icon={<MagnifyingGlassIcon />} label="Find Doctors" />
 
             {userInfo ? (

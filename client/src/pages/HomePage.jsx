@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaCalendarAlt, FaVideo, FaUserCircle } from 'react-icons/fa';
+import { useSelector } from 'react-redux';
 
 function HomePage() {
+  const {userInfo} = useSelector((state) => state.auth);
   return (
     <div className="text-center bg-slate-100 py-16 px-4 sm:px-6 lg:px-8">
       {/* Hero Section with Animation */}
@@ -27,6 +29,7 @@ function HomePage() {
           >
             <FaSearch className="h-5 w-5 mr-2" /> Find a Doctor
           </Link>
+          { !userInfo ? (
           <Link 
             to="/register" 
             className="btn-secondary bg-gradient-to-r from-gray-700 to-gray-600 text-white 
@@ -35,6 +38,7 @@ function HomePage() {
           >
             <FaUserCircle className="h-5 w-5 mr-2" /> Register Now
           </Link>
+          ):''}
         </div>
       </div>
 
