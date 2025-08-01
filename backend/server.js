@@ -19,7 +19,7 @@ const server = http.createServer(app);
 // Initialize Socket.io server with CORS configuration
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // Your frontend URL
+        origin: process.env.FRONTEND_URL || "http://localhost:5173",
         methods: ["GET", "POST"]
     }
 });
@@ -47,6 +47,11 @@ app.use('/api/ai', aiRoutes);
 // Basic route for testing
 app.get('/', (req, res) => {
     res.send('MediCose API is running...');
+});
+
+// Handle unknown routes (404)
+app.use((req, res, next) => {
+    res.status(404).json({ message: 'Route not found' });
 });
 
 // --- Socket.IO Connection Handling with Waiting Room ---
@@ -83,7 +88,7 @@ io.on('connection', (socket) => {
     // Event for the DOCTOR to admit the patient
     socket.on('doctor:admit_patient', ({ patientSocketId, appointmentId }) => {
         console.log(`👍 [Patient Admitted] Doctor admitting patient ${patientSocketId}`);
-        
+
         const patientSocket = io.sockets.sockets.get(patientSocketId);
         if (patientSocket) {
             patientSocket.join(appointmentId);
@@ -97,7 +102,7 @@ io.on('connection', (socket) => {
             socket.emit('patient:ready_for_connection', { patientSocketId });
             console.log(`    -> Notified doctor ${socket.id} that patient is ready for WebRTC.`);
         } else {
-             console.log(`    -> ❌ ERROR: Could not find patient socket ${patientSocketId} to admit.`);
+            console.log(`    -> ❌ ERROR: Could not find patient socket ${patientSocketId} to admit.`);
         }
     });
 

@@ -1,29 +1,18 @@
 // backend/controllers/aiController.js
 const asyncHandler = require('express-async-handler');
-
-// You will need to get a Google Cloud API Key for the Gemini API.
-// Store it securely in your .env file.
-// Example: GOOGLE_API_KEY=YOUR_GEMINI_API_KEY_HERE
-
-// @desc    Get AI response from Gemini API
-// @route   POST /api/ai/chat
-// @access  Public (or Private if desired)
 const getAiResponse = asyncHandler(async (req, res) => {
-    const { prompt, chatHistory = [] } = req.body; // chatHistory for conversational context
+    const { prompt, chatHistory = [] } = req.body;
 
     if (!prompt) {
         res.status(400);
         throw new Error('Prompt is required');
     }
 
-    // Construct the chat history for the Gemini API
-    // Gemini API expects history in a specific format: [{ role: "user", parts: [{ text: "..." }] }, { role: "model", parts: [{ text: "..." }] }]
     const formattedChatHistory = chatHistory.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
     }));
 
-    // Add the current prompt from the user
     formattedChatHistory.push({ role: "user", parts: [{ text: prompt }] });
 
     const payload = {
@@ -35,7 +24,7 @@ const getAiResponse = asyncHandler(async (req, res) => {
         // },
     };
 
-    const apiKey = process.env.GOOGLE_API_KEY || ""; // Get API key from environment variables
+    const apiKey = process.env.GOOGLE_API_KEY || ""; 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     try {
