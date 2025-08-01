@@ -1,136 +1,104 @@
+// In frontend/src/pages/DoctorDetailsPage.jsx
+
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDoctorDetails, clearSelectedDoctor } from '../features/doctor/doctorSlice';
+// Correct the import path to match your project structure
+import { fetchDoctorDetails, clearSelectedDoctor } from '../features/doctor/doctorSlice'; 
 import LoadingSpinner from '../components/LoadingSpinner';
 import Message from '../components/Message';
-import {
-  StarIcon,
-  AcademicCapIcon,
-  CurrencyDollarIcon,
-  MapPinIcon,
-  PhoneIcon,
-  ClockIcon,
-  ClipboardDocumentListIcon
-} from '@heroicons/react/24/outline';
+import { FaStethoscope, FaGraduationCap, FaBriefcase, FaMoneyBillWave, FaMapMarkerAlt, FaPhone, FaStar } from 'react-icons/fa';
 
 function DoctorDetailsPage() {
-  const { id } = useParams();
-  const dispatch = useDispatch();
-  const { selectedDoctor, loading, error } = useSelector((state) => state.doctors);
+    const { id: doctorId } = useParams();
+    const dispatch = useDispatch();
 
-  useEffect(() => {
-    dispatch(fetchDoctorDetails(id));
-    return () => {
-      dispatch(clearSelectedDoctor()); // Clear doctor details when unmounting
-    };
-  }, [dispatch, id]);
+    const { selectedDoctor: doctor, loading, error } = useSelector((state) => state.doctors);
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <Message type="error">{error}</Message>;
-  if (!selectedDoctor) return <Message type="info">Doctor not found.</Message>;
+    useEffect(() => {
+        if (doctorId) {
+            dispatch(fetchDoctorDetails(doctorId));
+        }
+        return () => {
+            dispatch(clearSelectedDoctor());
+        };
+        // ------------------------------------
+    }, [dispatch, doctorId]);
 
-  const doctor = selectedDoctor;
-  const profile = doctor.doctorProfile;
-
-  // Function to format availability
-  const formatAvailability = (availability) => {
-    if (!availability || Object.keys(availability).length === 0) {
-      return <p className="text-gray-500">Availability not specified.</p>;
+    if (loading) {
+        return <LoadingSpinner />;
     }
+
+    if (error) {
+        return <Message variant="danger">{error}</Message>;
+    }
+
+    if (!doctor) {
+        return <div className="text-center p-8"><Message>No doctor found.</Message></div>;
+    }
+
+    // Safely join the qualifications array into a string
+    const qualificationsText = Array.isArray(doctor.qualifications) ? doctor.qualifications.join(', ') : 'N/A';
+
     return (
-      <ul className="list-disc list-inside space-y-1">
-        {Object.entries(availability).map(([day, times]) => (
-          <li key={day}>
-            <span className="font-semibold">{day}:</span> {times.join(' - ')}
-          </li>
-        ))}
-      </ul>
+        <div className="container mx-auto p-6 bg-gray-50">
+            <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+                {/* Header Section */}
+                <div className="p-8 bg-primary text-white flex flex-col md:flex-row items-center">
+                    <img
+                        src={doctor.imageUrl || `https://ui-avatars.com/api/?name=${doctor.user?.name}&background=FFFFFF&color=4F46E5&size=128`}
+                        alt={doctor.user?.name}
+                        className="w-32 h-32 rounded-full border-4 border-white object-cover mb-4 md:mb-0 md:mr-8"
+                    />
+                    <div>
+                        <h1 className="text-4xl font-bold">{doctor.user?.name || 'Dr. Anonymous'}</h1>
+                        <p className="text-lg">{doctor.user?.email || 'No email provided'}</p>
+                        <div className="flex items-center mt-2 text-yellow-300">
+                           <FaStar className="mr-1" />
+                           <span className="text-xl font-bold text-white">{doctor.averageRating?.toFixed(1) || 'N/A'}</span>
+                           <span className="ml-2 text-white">({doctor.numReviews || 0} reviews)</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Body Section */}
+                <div className="p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Left Column: Details */}
+                        <div className="lg:col-span-2">
+                             <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Professional Details</h2>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div className="flex items-start"><FaStethoscope className="text-primary mt-1 mr-3" size={20} /><span><strong>Specialization:</strong><br/>{doctor.specialization || 'N/A'}</span></div>
+                                <div className="flex items-start"><FaGraduationCap className="text-primary mt-1 mr-3" size={20} /><span><strong>Qualifications:</strong><br/>{qualificationsText}</span></div>
+                                <div className="flex items-start"><FaBriefcase className="text-primary mt-1 mr-3" size={20} /><span><strong>Experience:</strong><br/>{doctor.experience || 0} years</span></div>
+                                <div className="flex items-start"><FaMoneyBillWave className="text-primary mt-1 mr-3" size={20} /><span><strong>Fee:</strong><br/>${doctor.fees || 0}</span></div>
+                             </div>
+                             
+                             <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Contact & Location</h2>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="flex items-start"><FaMapMarkerAlt className="text-primary mt-1 mr-3" size={20} /><span><strong>Address:</strong><br/>{`${doctor.address || ''}, ${doctor.city || ''}, ${doctor.state || ''}, ${doctor.country || ''}`}</span></div>
+                                <div className="flex items-start"><FaPhone className="text-primary mt-1 mr-3" size={20} /><span><strong>Phone:</strong><br/>{doctor.phone || 'N/A'}</span></div>
+                             </div>
+                        </div>
+
+                        {/* Right Column: Bio & Booking */}
+                        <div className="bg-gray-50 p-6 rounded-lg">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">About Me</h2>
+                            <p className="text-gray-600 leading-relaxed mb-8">
+                                {doctor.bio || 'No biography available.'}
+                            </p>
+                            <Link
+                                to={`/book-appointment/${doctor._id}`}
+                                className="w-full text-center block btn-primary text-lg px-8 py-4 rounded-lg shadow-lg hover:shadow-xl transition-transform transform hover:-translate-y-1"
+                            >
+                                Book Appointment
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
-  };
-
-  return (
-    <div className="py-8">
-      <div className="bg-card p-8 rounded-xl shadow-lg max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-8">
-          {/* Doctor Image */}
-          <img
-            src={`https://placehold.co/150x150/4F46E5/ffffff?text=Dr`} // Placeholder image
-            alt={`Dr. ${doctor.name}`}
-            className="w-36 h-36 rounded-full object-cover border-4 border-primary mb-6 md:mb-0"
-          />
-
-          {/* Doctor Info */}
-          <div className="text-center md:text-left flex-grow">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Dr. {doctor.name}</h1>
-            <p className="text-primary text-xl font-semibold mb-3">{profile.specialization}</p>
-
-            <div className="flex items-center justify-center md:justify-start text-gray-700 mb-3">
-              <StarIcon className="h-5 w-5 text-accent mr-1" />
-              <span className="font-medium">{profile.averageRating?.toFixed(1) || 'N/A'}</span>
-              <span className="ml-1 text-sm">({profile.numReviews || 0} reviews)</span>
-            </div>
-
-            <p className="text-gray-600 mb-2 flex items-center justify-center md:justify-start">
-              <AcademicCapIcon className="h-5 w-5 mr-2" /> {profile.experience} Years of Experience
-            </p>
-            <p className="text-gray-600 mb-2 flex items-center justify-center md:justify-start">
-              <CurrencyDollarIcon className="h-5 w-5 mr-2" /> Consultation Fees: ${profile.fees}
-            </p>
-            <p className="text-gray-600 mb-4 flex items-center justify-center md:justify-start">
-              <MapPinIcon className="h-5 w-5 mr-2" /> {profile.address}, {profile.city}, {profile.state}, {profile.country}
-            </p>
-            <p className="text-gray-600 mb-4 flex items-center justify-center md:justify-start">
-              <PhoneIcon className="h-5 w-5 mr-2" /> {profile.phone}
-            </p>
-
-            <p className="text-gray-700 mt-4 text-lg leading-relaxed">{profile.bio || 'No biography provided.'}</p>
-
-            <div className="mt-6 flex justify-center md:justify-start">
-              <Link to={`/book-appointment/${doctor._id}`} className="btn-primary px-6 py-3 text-lg">
-                Book Appointment
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Qualifications */}
-        <div className="mt-8 pt-6 border-t border-border">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <AcademicCapIcon className="h-7 w-7 mr-2 text-primary" /> Qualifications
-          </h2>
-          {profile.qualifications && profile.qualifications.length > 0 ? (
-            <ul className="list-disc list-inside text-gray-700 space-y-1">
-              {profile.qualifications.map((qual, index) => (
-                <li key={index}>{qual}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No qualifications listed.</p>
-          )}
-        </div>
-
-        {/* Availability */}
-        <div className="mt-8 pt-6 border-t border-border">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <ClockIcon className="h-7 w-7 mr-2 text-primary" /> Availability
-          </h2>
-          {formatAvailability(profile.availability)}
-        </div>
-
-        {/* Reviews (Placeholder) */}
-        <div className="mt-8 pt-6 border-t border-border">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <ClipboardDocumentListIcon className="h-7 w-7 mr-2 text-primary" /> Patient Reviews
-          </h2>
-          <Message type="info">
-            Reviews will be displayed here. (Feature to be implemented on frontend)
-          </Message>
-          {/* You would fetch and display actual reviews here */}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default DoctorDetailsPage;

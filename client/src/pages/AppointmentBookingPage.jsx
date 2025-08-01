@@ -1,3 +1,5 @@
+// In frontend/src/pages/AppointmentBookingPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -5,204 +7,160 @@ import { fetchDoctorDetails, clearSelectedDoctor } from '../features/doctor/doct
 import axios from '../api/axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Message from '../components/Message';
-import { CalendarDaysIcon, ClockIcon, CurrencyDollarIcon, VideoCameraIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, ClockIcon, VideoCameraIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
 function AppointmentBookingPage() {
-  const { doctorId } = useParams();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+    const { id: doctorId } = useParams(); 
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-  const { selectedDoctor, loading: doctorLoading, error: doctorError } = useSelector((state) => state.doctors);
-  const { userInfo } = useSelector((state) => state.auth);
+    const { selectedDoctor: doctor, loading: doctorLoading, error: doctorError } = useSelector((state) => state.doctors);
+    // Get both userInfo and the auth loading state
+    const { userInfo, loading: authLoading } = useSelector((state) => state.auth);
 
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [consultationType, setConsultationType] = useState('video'); // Default to video
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingError, setBookingError] = useState(null);
-  const [bookingSuccess, setBookingSuccess] = useState(null);
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedTime, setSelectedTime] = useState('');
+    const [consultationType, setConsultationType] = useState('video');
+    
+    const [bookingLoading, setBookingLoading] = useState(false);
+    const [bookingError, setBookingError] = useState(null);
+    const [bookingSuccess, setBookingSuccess] = useState(null);
 
-  useEffect(() => {
-    if (!userInfo) {
-      navigate('/login'); // Redirect to login if not authenticated
-    }
-    dispatch(fetchDoctorDetails(doctorId));
-    return () => {
-      dispatch(clearSelectedDoctor());
+    useEffect(() => {
+        if (authLoading) {
+            return;
+        }
+        if (!userInfo) {
+            navigate('/login');
+            return; 
+        }
+        if (doctorId) {
+            dispatch(fetchDoctorDetails(doctorId));
+        }
+        return () => {
+            dispatch(clearSelectedDoctor());
+        }
+    }, [dispatch, doctorId, userInfo, authLoading, navigate]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setBookingLoading(true);
+        setBookingError(null);
+        setBookingSuccess(null);
+
+        try {
+            const appointmentData = {
+                doctorId: doctor.user._id,
+                patientId: userInfo._id,
+                appointmentDate: selectedDate,
+                appointmentTime: selectedTime,
+                consultationType,
+                fees: doctor.fees,
+            };
+
+            await axios.post('/appointments', appointmentData);
+            
+            setBookingSuccess('Appointment booked successfully! Redirecting...');
+            setTimeout(() => {
+                navigate('/patient/dashboard');
+            }, 2000);
+
+        } catch (err) {
+            setBookingError(err.response?.data?.message || 'Failed to book appointment.');
+        } finally {
+            setBookingLoading(false);
+        }
     };
-  }, [dispatch, doctorId, userInfo, navigate]);
 
-  const handleDateChange = (e) => {
-    setSelectedDate(e.target.value);
-    setSelectedTime(''); // Reset time when date changes
-  };
-
-  const generateTimeSlots = () => {
-    if (!selectedDoctor || !selectedDate) return [];
-
-    const dayOfWeek = new Date(selectedDate).toLocaleString('en-US', { weekday: 'long' });
-    const availability = selectedDoctor.doctorProfile?.availability?.[dayOfWeek];
-
-    if (!availability || availability.length === 0) {
-      return []; // No availability for this day
+    // Show a single, combined loading spinner
+    if (authLoading || doctorLoading) {
+        return <LoadingSpinner />;
     }
 
-    const [startTimeStr, endTimeStr] = availability;
-    const slots = [];
-    let currentTime = new Date(`2000/01/01 ${startTimeStr}`);
-    const endTime = new Date(`2000/01/01 ${endTimeStr}`);
-
-    while (currentTime < endTime) {
-      const hours = currentTime.getHours().toString().padStart(2, '0');
-      const minutes = currentTime.getMinutes().toString().padStart(2, '0');
-      slots.push(`${hours}:${minutes}`);
-      currentTime.setMinutes(currentTime.getMinutes() + 30); // 30-minute slots
+    // Handle any errors that occur
+    if (doctorError) {
+        return <div className="text-center p-8"><Message variant="danger">{doctorError}</Message></div>;
     }
-    return slots;
-  };
-
-  const submitHandler = async (e) => {
-    e.preventDefault();
-    setBookingLoading(true);
-    setBookingError(null);
-    setBookingSuccess(null);
-
-    try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-
-      const { data } = await axios.post(
-        '/appointments',
-        {
-          doctorId,
-          appointmentDate: selectedDate,
-          appointmentTime: selectedTime,
-          consultationType,
-        },
-        config
-      );
-      setBookingSuccess(data.message);
-      // In a real app, you'd integrate with Stripe/Razorpay here
-      alert(`Appointment booked! Next step: Payment of $${data.fees}. Meeting link: ${data.meetingLink}`);
-      navigate(`/patient/dashboard`); // Redirect to dashboard after booking
-    } catch (err) {
-      setBookingError(err.response?.data?.message || err.message);
-    } finally {
-      setBookingLoading(false);
+    
+    // Handle the case where the doctor isn't found after loading
+    if (!doctor) {
+        return <div className="text-center p-8"><Message>Doctor details could not be loaded.</Message></div>;
     }
-  };
 
-  if (doctorLoading) return <LoadingSpinner />;
-  if (doctorError) return <Message type="error">{doctorError}</Message>;
-  if (!selectedDoctor) return <Message type="info">Doctor details not available.</Message>;
+    return (
+        <div className="container mx-auto p-6 max-w-4xl">
+            <div className="bg-white shadow-xl rounded-lg p-8">
+                <h1 className="text-4xl font-bold text-gray-800 mb-2">Book an Appointment</h1>
+                <p className="text-xl text-gray-600 mb-6">
+                    With <strong>{doctor.user?.name || 'Dr. Anonymous'}</strong>
+                </p>
 
-  const doctor = selectedDoctor;
-  const profile = doctor.doctorProfile;
-  const availableTimeSlots = generateTimeSlots();
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                    <p><strong>Specialization:</strong> {doctor.specialization}</p>
+                    <p><strong>Consultation Fee:</strong> ${doctor.fees || 0}</p>
+                </div>
+                
+                <form onSubmit={handleSubmit}>
+                    {bookingSuccess && <Message variant="success">{bookingSuccess}</Message>}
+                    {bookingError && <Message variant="danger">{bookingError}</Message>}
 
-  return (
-    <div className="py-8">
-      <div className="bg-card p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-          Book Appointment with Dr. {doctor.name}
-        </h1>
-        <p className="text-center text-gray-600 mb-6">
-          Specialization: <span className="font-semibold">{profile.specialization}</span> | Fees: <span className="font-semibold">${profile.fees}</span>
-        </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                        <div>
+                            <label htmlFor="appointmentDate" className="block text-lg font-medium text-gray-700 mb-2">
+                                <CalendarDaysIcon className="h-5 w-5 inline-block mr-1"/> Select Date
+                            </label>
+                            <input
+                                type="date"
+                                id="appointmentDate"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                required
+                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                min={new Date().toISOString().split('T')[0]} 
+                            />
+                        </div>
+                        <div>
+                             <label htmlFor="appointmentTime" className="block text-lg font-medium text-gray-700 mb-2">
+                                <ClockIcon className="h-5 w-5 inline-block mr-1"/> Select Time
+                            </label>
+                            <select
+                                id="appointmentTime"
+                                value={selectedTime}
+                                onChange={(e) => setSelectedTime(e.target.value)}
+                                required
+                                className="w-full p-3 border border-gray-300 rounded-lg"
+                            >
+                                <option value="" disabled>-- Select a time slot --</option>
+                                {Array.isArray(doctor.availability) ? (
+                                    doctor.availability.map((slot, index) => (
+                                        <option key={index} value={slot.time}>{slot.day} - {slot.time}</option>
+                                    ))
+                                ) : (
+                                    <option disabled>No specific time slots found</option>
+                                )}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                        <label className="block text-lg font-medium text-gray-700 mb-2">Consultation Type</label>
+                        <div className="flex items-center space-x-6">
+                            <label className="flex items-center"><input type="radio" name="consultationType" value="video" checked={consultationType === 'video'} onChange={() => setConsultationType('video')} className="h-4 w-4 text-primary focus:ring-primary"/><span className="ml-2 flex items-center"><VideoCameraIcon className="h-5 w-5 mr-1"/> Video Call</span></label>
+                            <label className="flex items-center"><input type="radio" name="consultationType" value="in-person" checked={consultationType === 'in-person'} onChange={() => setConsultationType('in-person')} className="h-4 w-4 text-primary focus:ring-primary"/><span className="ml-2 flex items-center"><BuildingOfficeIcon className="h-5 w-5 mr-1"/> In-Person</span></label>
+                        </div>
+                    </div>
 
-        {bookingError && <Message type="error">{bookingError}</Message>}
-        {bookingSuccess && <Message type="success">{bookingSuccess}</Message>}
-        {bookingLoading && <LoadingSpinner />}
-
-        <form onSubmit={submitHandler} className="space-y-6">
-          <div>
-            <label htmlFor="appointmentDate" className="block text-sm font-medium text-gray-700 mb-1">
-              <CalendarDaysIcon className="h-5 w-5 inline-block mr-1 text-primary" /> Select Date
-            </label>
-            <input
-              id="appointmentDate"
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="input-field"
-              min={new Date().toISOString().split('T')[0]} // Prevent selecting past dates
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="appointmentTime" className="block text-sm font-medium text-gray-700 mb-1">
-              <ClockIcon className="h-5 w-5 inline-block mr-1 text-primary" /> Select Time Slot
-            </label>
-            <select
-              id="appointmentTime"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-              className="input-field"
-              disabled={!selectedDate || availableTimeSlots.length === 0}
-              required
-            >
-              <option value="">Select a time</option>
-              {availableTimeSlots.length === 0 && selectedDate && (
-                <option disabled>No slots available for this date.</option>
-              )}
-              {availableTimeSlots.map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="consultationType" className="block text-sm font-medium text-gray-700 mb-1">
-              Consultation Type
-            </label>
-            <div className="flex space-x-4 mt-2">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-primary h-5 w-5"
-                  name="consultationType"
-                  value="video"
-                  checked={consultationType === 'video'}
-                  onChange={(e) => setConsultationType(e.target.value)}
-                />
-                <span className="ml-2 text-gray-700 flex items-center">
-                  <VideoCameraIcon className="h-5 w-5 mr-1" /> Video Call
-                </span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-primary h-5 w-5"
-                  name="consultationType"
-                  value="in-person"
-                  checked={consultationType === 'in-person'}
-                  onChange={(e) => setConsultationType(e.target.value)}
-                />
-                <span className="ml-2 text-gray-700 flex items-center">
-                  <BuildingOfficeIcon className="h-5 w-5 mr-1" /> In-Person
-                </span>
-              </label>
+                    <button
+                        type="submit"
+                        disabled={bookingLoading || !selectedDate || !selectedTime}
+                        className="w-full btn-primary text-lg py-3 rounded-lg disabled:bg-gray-400"
+                    >
+                        {bookingLoading ? 'Booking...' : 'Confirm Appointment'}
+                    </button>
+                </form>
             </div>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary w-full py-3 text-lg"
-            disabled={bookingLoading || !selectedDate || !selectedTime}
-          >
-            {bookingLoading ? 'Booking...' : 'Confirm Booking'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+        </div>
+    );
 }
 
 export default AppointmentBookingPage;

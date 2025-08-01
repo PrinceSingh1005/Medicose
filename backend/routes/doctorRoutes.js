@@ -1,10 +1,16 @@
+// In backend/routes/doctorRoutes.js
+
 const express = require('express');
-const { getDoctors, getDoctorById, updateDoctorProfile, getDoctorPrescriptions } = require('../controllers/doctorController');
+// Correctly import 'getAllDoctors' instead of 'getDoctors'
+const { getAllDoctors, getDoctorById, updateDoctorProfile, getDoctorPrescriptions,getMyDoctorProfile } = require('../controllers/doctorController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const router = express.Router();
 
-router.get('/', getDoctors); // Public route to list doctors
-router.get('/:id', getDoctorById); // Public route to get single doctor details
+// This now uses the correct function name and will work as intended
+router.get('/', getAllDoctors);
+router.get('/profile/me', protect, authorizeRoles('doctor'), getMyDoctorProfile);
+
+router.get('/:id', getDoctorById); 
 
 // Private doctor routes
 router.put('/profile', protect, authorizeRoles('doctor'), updateDoctorProfile);

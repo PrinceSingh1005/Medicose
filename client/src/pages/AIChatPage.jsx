@@ -3,6 +3,7 @@ import axios from '../api/axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Message from '../components/Message';
 import { PaperAirplaneIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import ReactMarkdown from 'react-markdown'; // Add this if rendering markdown
 
 function AIChatPage() {
   const [messages, setMessages] = useState([
@@ -38,11 +39,15 @@ function AIChatPage() {
         chatHistory: chatHistoryForAI
       });
 
-      setMessages((prev) => [...prev, { sender: 'ai', text: data.response }]);
+      const formattedText = data.response?.trim() || 'Sorry, I had trouble understanding that.';
+
+      setMessages((prev) => [...prev, { sender: 'ai', text: formattedText }]);
     } catch (err) {
       console.error(err);
-      const fallback = { sender: 'ai', text: "Sorry, I'm having trouble connecting right now." };
-      setMessages((prev) => [...prev, fallback]);
+      setMessages((prev) => [...prev, {
+        sender: 'ai',
+        text: "Sorry, I'm having trouble connecting right now."
+      }]);
       setError(err.response?.data?.message || "AI request failed. Try again.");
     } finally {
       setLoading(false);
@@ -50,59 +55,61 @@ function AIChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-160px)] bg-white border border-gray-200 rounded-xl shadow-lg max-w-3xl mx-2 md:mx-auto my-6 overflow-hidden">
-      
+    <div className="flex flex-col h-[calc(100vh-160px)] bg-white border border-gray-200 rounded-2xl shadow-2xl max-w-3xl mx-4 md:mx-auto my-8 overflow-hidden">
+
       {/* Header */}
-      <div className="flex items-center gap-3 p-5 border-b bg-gradient-to-r from-indigo-500 to-blue-600 text-white">
+      <div className="flex items-center gap-3 px-6 py-4 border-b bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
         <SparklesIcon className="h-6 w-6" />
         <h1 className="text-lg font-semibold">MediCose AI Assistant</h1>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 transition-all">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-gray-50 text-sm sm:text-base">
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} transition-all`}
+            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[75%] px-4 py-2 rounded-lg text-sm shadow-md transform transition-all duration-300 ease-in-out
+              className={`max-w-[80%] px-4 py-3 rounded-xl shadow-sm transition duration-300
                 ${msg.sender === 'user'
                   ? 'bg-indigo-600 text-white rounded-br-none'
-                  : 'bg-white text-gray-800 rounded-bl-none border'}
+                  : 'bg-white text-gray-800 border rounded-bl-none'}
               `}
             >
-              {msg.text}
+              {msg.sender === 'ai' ? (
+                <div className="prose prose-sm sm:prose max-w-full prose-indigo ">
+                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                </div>
+              ) : (
+                msg.text
+              )}
             </div>
           </div>
         ))}
 
-        {/* Loading Indicator */}
+        {/* Loading Bubble */}
         {loading && (
           <div className="flex justify-start">
-            <div className="max-w-[75%] px-4 py-2 rounded-lg shadow bg-white text-gray-800 rounded-bl-none border">
+            <div className="max-w-[80%] px-4 py-3 rounded-xl shadow bg-white text-gray-800 border">
               <LoadingSpinner />
             </div>
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
-          <Message type="error">{error}</Message>
-        )}
-
+        {error && <Message type="error">{error}</Message>}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Input */}
       <form
         onSubmit={handleSendMessage}
-        className="flex items-center gap-3 border-t bg-white p-4"
+        className="flex items-center gap-3 border-t bg-white px-4 py-3"
       >
         <input
           type="text"
           placeholder="Type your message..."
-          className="flex-1 border rounded-full px-5 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+          className="flex-1 border border-gray-300 rounded-full px-5 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
@@ -110,7 +117,7 @@ function AIChatPage() {
         <button
           type="submit"
           disabled={loading || !input.trim()}
-          className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow transition-all duration-200"
+          className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md transition"
           title="Send Message"
         >
           <PaperAirplaneIcon className="h-5 w-5 transform rotate-45" />

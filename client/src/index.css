@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* tailwind.css */
+.input-field {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200;
+}
+
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -48,3 +54,4 @@
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }
 /* Add more delays as needed */
+

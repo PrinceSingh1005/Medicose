@@ -1,199 +1,204 @@
+// In frontend/src/pages/ProfilePage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getUserProfile, updateProfile, resetAuthStatus } from '../features/auth/authSlice';
+import axios from '../api/axios'; // For fetching doctor profile details initially
+import { updateProfile } from '../features/auth/authSlice'; // Use the correct thunk from authSlice
+import { updateDoctorProfile } from '../features/doctor/doctorSlice'; // The thunk for doctor-specific data
 import LoadingSpinner from '../components/LoadingSpinner';
 import Message from '../components/Message';
-import { FaUserCircle, FaStethoscope, FaClock } from 'react-icons/fa';
+import { FaStar, FaCalendarAlt } from 'react-icons/fa'; // For the rating icon
 
 function ProfilePage() {
-  const dispatch = useDispatch();
-  const { userInfo, profile, loading, error, success } = useSelector((state) => state.auth);
+    const dispatch = useDispatch();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState(null);
+    const { userInfo } = useSelector((state) => state.auth);
+    const { loading: doctorLoading, error: doctorError } = useSelector((state) => state.doctors);
+    const { loading: authLoading, error: authError } = useSelector((state) => state.auth);
 
-  const [specialization, setSpecialization] = useState('');
-  const [qualifications, setQualifications] = useState('');
-  const [experience, setExperience] = useState('');
-  const [fees, setFees] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [country, setCountry] = useState('');
-  const [phone, setPhone] = useState('');
-  const [bio, setBio] = useState('');
-  const [availability, setAvailability] = useState({});
-  const [medicalLicense, setMedicalLicense] = useState('');
+    const initialAvailability = {
+        Monday: '', Tuesday: '', Wednesday: '', Thursday: '',
+        Friday: '', Saturday: '', Sunday: '',
+    };
 
-  useEffect(() => {
-    if (!userInfo) return;
-    if (!profile) {
-      dispatch(getUserProfile());
-    } else {
-      setName(profile.name);
-      setEmail(profile.email);
-      if (profile.role === 'doctor' && profile.doctorProfile) {
-        const doc = profile.doctorProfile;
-        setSpecialization(doc.specialization || '');
-        setQualifications(doc.qualifications?.join(', ') || '');
-        setExperience(doc.experience || '');
-        setFees(doc.fees || '');
-        setAddress(doc.address || '');
-        setCity(doc.city || '');
-        setState(doc.state || '');
-        setCountry(doc.country || '');
-        setPhone(doc.phone || '');
-        setBio(doc.bio || '');
-        setAvailability(doc.availability || {});
-        setMedicalLicense(doc.medicalLicense || '');
-      }
-    }
-  }, [dispatch, userInfo, profile]);
+    const [formData, setFormData] = useState({
+        name: '', email: '', password: '', confirmPassword: '',
+        specialization: '', qualifications: '', experience: '',
+        fees: '', address: '', city: '', state: '', country: '',
+        phone: '', bio: '', averageRating: 0, numReviews: 0,
+        availability: initialAvailability,
+    });
 
-  useEffect(() => {
-    if (success) {
-      setMessage('Profile updated successfully!');
-      dispatch(resetAuthStatus());
-      setPassword('');
-      setConfirmPassword('');
-    }
-    if (error) {
-      setMessage(error);
-      dispatch(resetAuthStatus());
-    }
-  }, [success, error, dispatch]);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [pageError, setPageError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
 
-  const submitHandler = (e) => {
-    e.preventDefault();
-    setMessage(null);
-    if (password !== confirmPassword) return setMessage('Passwords do not match');
+    useEffect(() => {
+        setFormData(prev => ({ ...prev, name: userInfo.name, email: userInfo.email }));
+        if (userInfo.role === 'doctor') {
+            const fetchDoctorProfile = async () => {
+                try {
+                    const { data } = await axios.get('/doctors/profile/me');
+                    if (data) {
+                        const availabilityFromServer = data.availability || {};
+                        const fullAvailability = { ...initialAvailability };
+                        for (const day in availabilityFromServer) {
+                            fullAvailability[day] = Array.isArray(availabilityFromServer[day]) ? availabilityFromServer[day].join(', ') : '';
+                        }
+                        
+                        const displayData = { 
+                            ...data, 
+                            qualifications: data.qualifications?.join(', ') || '',
+                            availability: fullAvailability,
+                        };
+                        setFormData(prev => ({ ...prev, ...displayData }));
+                    }
+                } catch (e) {
+                    setPageError('Could not load your doctor profile.');
+                } finally {
+                    setPageLoading(false);
+                }
+            };
+            fetchDoctorProfile();
+        } else {
+            setPageLoading(false);
+        }
+    }, [userInfo]);
 
-    const userData = { name, email };
-    if (password) userData.password = password;
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-    if (userInfo.role === 'doctor') {
-      userData.doctorProfile = {
-        specialization,
-        qualifications: qualifications.split(',').map(q => q.trim()).filter(Boolean),
-        experience: +experience,
-        fees: +fees,
-        address, city, state, country, phone, bio, availability, medicalLicense
-      };
-    }
-    dispatch(updateProfile(userData));
-  };
+    const handleAvailabilityChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            availability: {
+                ...prev.availability,
+                [name]: value,
+            }
+        }));
+    };
 
-  const handleAvailabilityChange = (day, type, value) => {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: type === 'start' ? [value, prev[day]?.[1] || ''] : [prev[day]?.[0] || '', value]
-    }));
-  };
+    const submitHandler = async (e) => {
+        e.preventDefault();
+        setSuccessMessage(null);
+        setPageError(null);
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        if (formData.password && formData.password !== formData.confirmPassword) {
+            setPageError('Passwords do not match');
+            return;
+        }
 
-  if (loading && !profile) return <LoadingSpinner />;
-  if (!profile) return <Message type="info">Loading profile...</Message>;
+        try {
+            const userUpdateData = { name: formData.name, email: formData.email };
+            if (formData.password) userUpdateData.password = formData.password;
+            await dispatch(updateProfile(userUpdateData)).unwrap();
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto bg-white border border-gray-200 p-10 rounded-2xl shadow-xl">
-        <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">
-          {userInfo.role === 'doctor' ? 'Doctor Profile' : 'Patient Profile'}
-        </h1>
+            if (userInfo.role === 'doctor') {
+                // Format availability back into the Map<String, [String]> structure
+                const availabilityForDb = {};
+                for (const day in formData.availability) {
+                    if (formData.availability[day]) { // Only include days with timings
+                        availabilityForDb[day] = formData.availability[day].split(',').map(time => time.trim());
+                    }
+                }
 
-        {message && <Message type={success ? 'success' : 'error'}>{message}</Message>}
-        {loading && <LoadingSpinner />}
+                const doctorProfileData = {
+                    specialization: formData.specialization, qualifications: formData.qualifications,
+                    experience: formData.experience, fees: formData.fees,
+                    address: formData.address, city: formData.city, state: formData.state,
+                    country: formData.country, phone: formData.phone, bio: formData.bio,
+                    availability: availabilityForDb,
+                };
+                await dispatch(updateDoctorProfile(doctorProfileData)).unwrap();
+            }
+            setSuccessMessage('Profile updated successfully!');
+        } catch (error) {
+            setPageError(error.message || 'An error occurred during the update.');
+        }
+    };
 
-        <form onSubmit={submitHandler} className="space-y-12">
-          {/* User Info */}
-          <section>
-            <div className="flex items-center gap-2 text-gray-700 mb-6">
-              <FaUserCircle className="text-2xl text-indigo-600" />
-              <h2 className="text-xl font-semibold">Personal Information</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field id="name" label="Full Name" value={name} onChange={setName} />
-              <Field id="email" label="Email" type="email" value={email} onChange={setEmail} />
-              <Field id="password" label="New Password" type="password" value={password} onChange={setPassword} />
-              <Field id="confirmPassword" label="Confirm Password" type="password" value={confirmPassword} onChange={setConfirmPassword} />
-            </div>
-          </section>
+    const isLoading = pageLoading || authLoading || doctorLoading;
+    const error = pageError || authError || pageError;
 
-          {userInfo.role === 'doctor' && (
-            <section>
-              <div className="flex items-center gap-2 text-gray-700 mb-6">
-                <FaStethoscope className="text-2xl text-indigo-600" />
-                <h2 className="text-xl font-semibold">Professional Information</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Field id="specialization" label="Specialization" value={specialization} onChange={setSpecialization} />
-                <Field id="qualifications" label="Qualifications (comma separated)" value={qualifications} onChange={setQualifications} />
-                <Field id="experience" label="Years of Experience" type="number" value={experience} onChange={setExperience} />
-                <Field id="fees" label="Consultation Fee ($)" type="number" value={fees} onChange={setFees} />
-                <Field id="phone" label="Phone Number" type="tel" value={phone} onChange={setPhone} />
-                <Field id="address" label="Address" value={address} onChange={setAddress} />
-                <Field id="city" label="City" value={city} onChange={setCity} />
-                <Field id="state" label="State" value={state} onChange={setState} />
-                <Field id="country" label="Country" value={country} onChange={setCountry} />
-              </div>
-              <div className="mt-6">
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                <textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="input-field min-h-[100px]"
-                  maxLength="500"
-                ></textarea>
-                <p className="text-right text-xs text-gray-400">{bio.length}/500</p>
-              </div>
-              <div className="mt-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <FaClock className="text-indigo-600" />
-                  <h3 className="text-lg font-medium text-gray-700">Availability</h3>
+    if (isLoading) return <LoadingSpinner />;
+
+    return (
+        <div className="container mx-auto p-6 max-w-4xl">
+            <h1 className="text-4xl font-bold mb-6">User Profile</h1>
+            <form onSubmit={submitHandler} className="bg-white p-8 rounded-lg shadow-lg">
+                {error && <Message variant="danger">{error}</Message>}
+                {successMessage && <Message variant="success">{successMessage}</Message>}
+
+                {/* User Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="font-semibold">Name</label><input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                    <div><label className="font-semibold">Email</label><input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                    <div><label className="font-semibold">Password</label><input type="password" name="password" placeholder="Leave blank to keep same" value={formData.password} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                    <div><label className="font-semibold">Confirm Password</label><input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
                 </div>
-                <div className="space-y-2">
-                  {daysOfWeek.map(day => (
-                    <div key={day} className="flex items-center gap-3">
-                      <label className="w-24 text-sm font-medium text-gray-600">{day}</label>
-                      <input type="time" value={availability[day]?.[0] || ''} onChange={(e) => handleAvailabilityChange(day, 'start', e.target.value)} className="input-field w-28" />
-                      <span className="text-gray-500">to</span>
-                      <input type="time" value={availability[day]?.[1] || ''} onChange={(e) => handleAvailabilityChange(day, 'end', e.target.value)} className="input-field w-28" />
-                    </div>
-                  ))}
+
+                {/* Doctor Fields */}
+                {userInfo.role === 'doctor' && (
+                    <>
+                        {/* Stats Section */}
+                        <div className="mt-8 border-t pt-6">
+                             <h2 className="text-2xl font-bold mb-4">Stats & Vitals</h2>
+                             <div className="flex items-center space-x-6 bg-gray-50 p-4 rounded-lg">
+                                 <div className="text-center"><div className="flex items-center justify-center text-yellow-500"><FaStar className="mr-1" /><span className="text-2xl font-bold">{formData.averageRating?.toFixed(1) || 'N/A'}</span></div><p className="text-sm text-gray-600">Average Rating</p></div>
+                                 <div className="text-center"><p className="text-2xl font-bold">{formData.numReviews || 0}</p><p className="text-sm text-gray-600">Total Reviews</p></div>
+                             </div>
+                        </div>
+                    
+                        {/* Editable Details */}
+                        <div className="mt-8 border-t pt-6">
+                            <h2 className="text-2xl font-bold mb-4">Doctor Details</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label className="font-semibold">Specialization</label><input type="text" name="specialization" value={formData.specialization || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">Experience (Years)</label><input type="number" name="experience" value={formData.experience || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">Fees</label><input type="number" name="fees" value={formData.fees || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">Phone</label><input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div className="md:col-span-2"><label className="font-semibold">Qualifications (comma-separated)</label><input type="text" name="qualifications" value={formData.qualifications || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div className="md:col-span-2"><label className="font-semibold">Address</label><input type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">City</label><input type="text" name="city" value={formData.city || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">State</label><input type="text" name="state" value={formData.state || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div><label className="font-semibold">Country</label><input type="text" name="country" value={formData.country || ''} onChange={handleInputChange} className="w-full p-2 border rounded"/></div>
+                                <div className="md:col-span-2"><label className="font-semibold">Bio</label><textarea name="bio" value={formData.bio || ''} onChange={handleInputChange} className="w-full p-2 border rounded" rows="4"></textarea></div>
+                            </div>
+                        </div>
+
+                        {/* --- NEW AVAILABILITY SECTION --- */}
+                        <div className="mt-8 border-t pt-6">
+                             <h2 className="text-2xl font-bold mb-4 flex items-center"><FaCalendarAlt className="mr-2" /> Weekly Availability</h2>
+                             <p className="text-sm text-gray-500 mb-4">Enter time slots for each day, separated by commas. E.g., 09:00-12:00, 14:00-17:00</p>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                {Object.keys(initialAvailability).map((day) => (
+                                    <div key={day}>
+                                        <label className="font-semibold capitalize">{day}</label>
+                                        <input
+                                            type="text"
+                                            name={day}
+                                            value={formData.availability[day] || ''}
+                                            onChange={handleAvailabilityChange}
+                                            placeholder="e.g., 09:00-17:00"
+                                            className="w-full p-2 border rounded"
+                                        />
+                                    </div>
+                                ))}
+                             </div>
+                        </div>
+                    </>
+                )}
+                <div className="mt-8">
+                    <button type="submit" disabled={isLoading} className="w-full btn-primary py-3 rounded-lg disabled:bg-gray-400">
+                        {isLoading ? 'Updating...' : 'Update Profile'}
+                    </button>
                 </div>
-              </div>
-              <Field id="medicalLicense" label="Medical License (URL)" value={medicalLicense} onChange={setMedicalLicense} placeholder="e.g. https://drive.com/file.pdf" />
-            </section>
-          )}
-
-          <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition">
-            {loading ? 'Updating...' : 'Update Profile'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function Field({ id, label, type = 'text', value, onChange, placeholder = '' }) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="input-field"
-      />
-    </div>
-  );
+            </form>
+        </div>
+    );
 }
 
 export default ProfilePage;

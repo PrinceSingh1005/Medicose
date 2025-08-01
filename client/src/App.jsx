@@ -22,7 +22,7 @@ import AIChatPage from './pages/AIChatPage';
 const App = () => {
   return (
     <Router>
-      <div className="">
+      <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="">
           <Routes>

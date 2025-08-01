@@ -50,6 +50,26 @@ export const fetchDoctorDetails = createAsyncThunk(
   }
 );
 
+export const updateDoctorProfile = createAsyncThunk(
+  'doctors/updateProfile',
+  async (profileData, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } } = getState();
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      // Assuming your update endpoint is '/api/doctors/profile'
+      const { data } = await axios.put('/doctors/profile', profileData, config);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const doctorSlice = createSlice({
   name: 'doctors',
   initialState,
@@ -92,6 +112,22 @@ const doctorSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
         state.selectedDoctor = null;
+      })
+      // Update Doctor Profile
+      .addCase(updateDoctorProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null; // Clear previous errors
+      })
+      .addCase(updateDoctorProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update the selectedDoctor if it's the one being edited
+        if (state.selectedDoctor?._id === action.payload._id) {
+            state.selectedDoctor = { ...state.selectedDoctor, ...action.payload };
+        }
+      })
+      .addCase(updateDoctorProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
