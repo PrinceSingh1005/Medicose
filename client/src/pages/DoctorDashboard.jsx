@@ -158,7 +158,7 @@ function DoctorDashboard() {
 
       {/* Quick Links */}
       <div className="mt-8 text-center">
-        <Link to="/doctor/profile" className="btn-primary text-lg mr-4">
+        <Link to="/doctor/profile" className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md transition">
           Update Profile
         </Link>
         {/* Add more links like "View Prescriptions Created" */}

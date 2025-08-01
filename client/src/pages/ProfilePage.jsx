@@ -127,7 +127,12 @@ function ProfilePage() {
 
     return (
         <div className="container mx-auto p-6 max-w-4xl">
-            <h1 className="text-4xl font-bold mb-6">User Profile</h1>
+            {userInfo.role==='doctor' && (<h1 className="text-4xl font-bold mb-6">Doctor Profile</h1>)}
+            {userInfo.role==='patient' && (
+                <h2 className="text-2xl font-semibold mb-4">Patient Profile</h2>
+            )}
+            {error && <Message variant="danger">{error}</Message>}
+            {successMessage && <Message variant="success">{successMessage}</Message>}
             <form onSubmit={submitHandler} className="bg-white p-8 rounded-lg shadow-lg">
                 {error && <Message variant="danger">{error}</Message>}
                 {successMessage && <Message variant="success">{successMessage}</Message>}
