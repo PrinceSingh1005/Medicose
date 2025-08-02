@@ -8,7 +8,7 @@ import Message from '../components/Message';
 import LoadingSpinner from '../components/LoadingSpinner';
 import axios from '../api/axios';
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL;
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 function VideoCallPage() {
     const { appointmentId } = useParams();
