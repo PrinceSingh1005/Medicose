@@ -33,20 +33,20 @@ const getAllDoctors = asyncHandler(async (req, res) => {
 // @desc    Get single doctor by ID
 // @route   GET /api/doctors/:id
 // @access  Public
+// Example endpoint: GET /api/doctors/user/:userId
 const getDoctorById = asyncHandler(async (req, res) => {
     const doctor = await DoctorProfile.findById(req.params.id)
-        .populate('user', 'name email role isVerified'); // Populate all necessary fields
+        .populate('user', 'name email role isVerified');
 
-    // --- THIS IS THE FIX ---
-    // Check the 'role' and 'isVerified' fields on the populated 'user' object, not the 'doctor' profile itself.
-    if (doctor && doctor.user && doctor.user.role === 'doctor' /* && doctor.user.isVerified */) {
-    // -----------------------
+    if (doctor && doctor.user?.role === 'doctor') {
         res.json(doctor);
     } else {
         res.status(404);
         throw new Error('Doctor not found or not verified');
     }
+
 });
+
 
 
 // --- ADD THIS NEW FUNCTION ---
@@ -74,8 +74,6 @@ const updateDoctorProfile = asyncHandler(async (req, res) => {
     const doctorProfile = await DoctorProfile.findOne({ user: req.user._id });
 
     if (doctorProfile) {
-        // --- THIS IS THE FIX ---
-        // Update all fields from the schema if they are provided in the request body
         doctorProfile.specialization = req.body.specialization || doctorProfile.specialization;
         // For qualifications, expect a comma-separated string and turn it into an array
         if (req.body.qualifications) {

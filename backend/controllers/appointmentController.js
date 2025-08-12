@@ -1,12 +1,12 @@
 const asyncHandler = require('express-async-handler');
 const Appointment = require('../models/Appointment');
 const DoctorProfile = require('../models/DoctorProfile');
-const User = require('../models/User'); // For fetching user details
-const Prescription = require('../models/Prescription'); // Assuming you have this model
+const User = require('../models/User');
+const Prescription = require('../models/Prescription');
+const { isValidTimeSlot } = require('../utils/timeUtils');
+const { sendAppointmentConfirmation } = require('../services/emailService');
+const { emitSocketEvent } = require('../config/socket');
 
-// @desc    Get a single appointment by ID
-// @route   GET /api/appointments/:id
-// @access  Private (Patient or Doctor involved in the appointment)
 const getAppointmentById = asyncHandler(async (req, res) => {
     const appointment = await Appointment.findById(req.params.id)
         .populate('patient', 'name email')
@@ -29,74 +29,125 @@ const getAppointmentById = asyncHandler(async (req, res) => {
     res.json(appointment);
 });
 
+// Helper for emitting to a specific user (by userId)
+const emitToUser = (userId, event, data) => {
+    emitSocketEvent(userId.toString(), event, data);
+};
 
 // @desc    Book a new appointment
 // @route   POST /api/appointments
 // @access  Private/Patient
 const bookAppointment = asyncHandler(async (req, res) => {
-    const { doctorId, appointmentDate, appointmentTime, consultationType } = req.body;
+    const {
+        doctorId,
+        appointmentDate,
+        appointmentTime,
+        consultationType,
+        reason
+    } = req.body;
 
+    // --- Validation ---
     if (req.user.role !== 'patient') {
-        res.status(403);
-        throw new Error('Only patients can book appointments');
+        return res.status(403).json({ message: 'Only patients can book appointments' });
     }
 
-    // Check if doctor exists and is verified
-    const doctor = await User.findById(doctorId);
-    if (!doctor || doctor.role !== 'doctor' || !doctor.isVerified) {
-        res.status(404);
-        throw new Error('Doctor not found or not verified');
+    if (!doctorId || !appointmentDate || !appointmentTime || !consultationType) {
+        return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    const doctorProfile = await DoctorProfile.findOne({ user: doctorId });
+    if (!doctorId.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({ message: 'Invalid doctor ID format' });
+    }
+
+    console.log('Looking up doctor profile for ID:', doctorId);
+
+    // --- Find DoctorProfile by ID or by User ID fallback ---
+    let doctorProfile = await DoctorProfile.findById(doctorId);
     if (!doctorProfile) {
-        res.status(404);
-        throw new Error('Doctor profile not found');
+        // Try as User ID -> lookup user and then profile
+        const doctorUserRecord = await User.findById(doctorId);
+        if (doctorUserRecord && doctorUserRecord.role === 'doctor') {
+            doctorProfile = await DoctorProfile.findOne({ user: doctorUserRecord._id });
+        }
     }
 
-    // Basic availability check (more complex logic needed for real-time slot management)
-    // For simplicity, we'll assume the frontend sends a valid slot based on doctor's availability
-    // In a real app, you'd check doctorProfile.availability for the given date/time
-
-    // Check for existing appointments for this doctor at this exact time
-    const existingAppointment = await Appointment.findOne({
-        doctor: doctorId,
-        appointmentDate: new Date(appointmentDate),
-        appointmentTime: appointmentTime,
-        status: { $in: ['pending', 'confirmed'] } // Check for pending or confirmed appointments
-    });
-
-    if (existingAppointment) {
-        res.status(400);
-        throw new Error('This time slot is already booked for the doctor.');
+    if (!doctorProfile) {
+        return res.status(404).json({ message: 'Doctor profile not found' });
     }
 
-    // Create a meeting link (simple placeholder, in real app use WebRTC room ID or Twilio/Agora)
-    const meetingLink = `https://meet.medicose.com/${Math.random().toString(36).substring(2, 15)}`;
+    // --- Verify doctor user data ---
+    const doctorUser = await User.findById(doctorProfile.user);
+    if (!doctorUser) {
+        return res.status(404).json({ message: 'Doctor user not found' });
+    }
+    if (doctorUser.role !== 'doctor' || !doctorUser.isVerified) {
+        return res.status(400).json({ message: 'Doctor is not available for appointments' });
+    }
 
-    const appointment = await Appointment.create({
+    // --- Date & time validation ---
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    if (isNaN(appointmentDateTime.getTime())) {
+        return res.status(400).json({ message: 'Invalid date or time format' });
+    }
+    if (appointmentDateTime < new Date()) {
+        return res.status(400).json({ message: 'Cannot book appointments in the past' });
+    }
+    if (!(await isValidTimeSlot(appointmentTime, appointmentDate, doctorProfile._id))) {
+        return res.status(400).json({ message: 'Selected time slot is not available' });
+    }
+
+
+    // --- Check availability using new utility ---
+    const available = await isValidTimeSlot(appointmentTime, appointmentDate, doctorProfile._id);
+    if (!available) {
+        return res.status(400).json({ message: 'Selected time slot is not available' });
+    }
+
+
+    // --- Create appointment ---
+    try {
+        const appointment = await Appointment.create({
         patient: req.user._id,
-        doctor: doctorId,
-        doctorProfile: doctorProfile._id,
+        doctor: doctorUser._id,          // User ref
+        doctorProfile: doctorProfile._id, // DoctorProfile ref
         appointmentDate: new Date(appointmentDate),
         appointmentTime,
         consultationType,
-        paymentStatus: 'pending', // Payment will be handled separately
-        meetingLink,
+        reason: reason || '',
+        fees: doctorProfile.fees || 0,
+        status: 'pending',
+        paymentStatus: doctorProfile.fees > 0 ? 'pending' : 'paid',
     });
-
-    if (appointment) {
-        res.status(201).json({
-            message: 'Appointment booked successfully. Awaiting payment.',
-            appointmentId: appointment._id,
-            meetingLink: appointment.meetingLink,
-            fees: doctorProfile.fees // Return fees for frontend payment processing
-        });
-    } else {
-        res.status(400);
-        throw new Error('Invalid appointment data');
+    res.status(201).json({
+        message: 'Appointment booked successfully',
+        appointmentId: appointment._id,
+        paymentRequired: doctorProfile.fees > 0
+    });
+    }catch(error){
+        if (error.code == 11000) {
+            return res.status(409).json({ message: 'Appointment already exists for the selected time slot' });
+        }
+        return res.status(500).json({ message: 'Failed to create appointment' });
     }
+
+
+    // // --- Send confirmation email (async, no await) ---
+    // sendAppointmentConfirmation({
+    //     patient: req.user,
+    //     doctor: doctorUser,
+    //     appointment
+    // }).catch(err => console.error('Appointment confirmation email failed:', err));
+
+    // // --- Optionally emit socket event to doctor about new appointment ---
+    // emitToUser(doctorUser._id, 'new-appointment', {
+    //     appointmentId: appointment._id,
+    //     patientName: req.user.name,
+    //     appointmentDate,
+    //     appointmentTime
+    // });
+
 });
+
 
 // @desc    Get doctor's appointments
 // @route   GET /api/appointments/doctor
@@ -114,31 +165,61 @@ const getDoctorAppointments = asyncHandler(async (req, res) => {
     res.json(appointments);
 });
 
-// @desc    Update appointment status (confirm/reject/complete)
-// @route   PUT /api/appointments/:id/status
-// @access  Private/Doctor
+// In updateAppointmentStatus, make sure to check if doctor.user is populated correctly:
 const updateAppointmentStatus = asyncHandler(async (req, res) => {
-    const { status } = req.body; // 'confirmed', 'rejected', 'completed'
-    const appointment = await Appointment.findById(req.params.id);
+    const { status } = req.body;
+    const validStatuses = ['confirmed', 'cancelled', 'completed'];
+
+    if (!validStatuses.includes(status)) {
+        res.status(400);
+        throw new Error('Invalid status value');
+    }
+
+    const appointment = await Appointment.findById(req.params.id)
+        .populate({
+            path: 'doctor',
+            populate: { path: 'user' }
+        })
+        .populate('patient');
 
     if (!appointment) {
         res.status(404);
         throw new Error('Appointment not found');
     }
 
-    // Ensure the doctor updating the status owns the appointment
-    if (appointment.doctor.toString() !== req.user._id.toString()) {
+    if (!appointment.doctor || !appointment.doctor.user) {
+        res.status(500);
+        throw new Error('Invalid doctor data linked to appointment');
+    }
+
+    if (appointment.doctor.user._id.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not authorized to update this appointment');
     }
 
-    // Update status
+    // Validate transition rules as before
+    if (status === 'completed' && appointment.status !== 'confirmed') {
+        res.status(400);
+        throw new Error('Only confirmed appointments can be marked as completed');
+    }
+
     appointment.status = status;
     const updatedAppointment = await appointment.save();
 
-    res.json(updatedAppointment);
+    // Emit socket updates
+    emitToUser(appointment.patient._id, 'appointment:updated', {
+        appointmentId: appointment._id,
+        newStatus: status,
+        doctorName: appointment.doctor.user.name
+    });
 
-    // TODO: Implement Socket.io notification to patient about status change
+    emitToUser(appointment.doctor.user._id, 'appointment:updated', {
+        appointmentId: appointment._id,
+        newStatus: status,
+        patientName: appointment.patient.name
+    });
+
+    res.json(updatedAppointment);
 });
 
 // @desc    Create a prescription for a completed appointment
@@ -221,7 +302,6 @@ const handlePaymentSuccess = asyncHandler(async (req, res) => {
 
     // TODO: Implement Socket.io notification to doctor about new confirmed appointment
 });
-
 
 module.exports = {
     getAppointmentById,

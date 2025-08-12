@@ -123,12 +123,12 @@ function VideoCallPage() {
                 setAppointmentDetails(appt);
 
                 // 2. Check if the meeting has already ended
-                if (appt.meetingStatus === 'ended') {
-                    setErrorMessage("This meeting has already ended.");
-                    setCallStatus('ended');
-                    setApptLoading(false);
-                    return; // Stop initialization
-                }
+                // if (appt.meetingStatus === 'ended') {
+                //     setErrorMessage("This meeting has already ended.");
+                //     setCallStatus('ended');
+                //     setApptLoading(false);
+                //     return; // Stop initialization
+                // }
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 setLocalStream(stream);
                 localStreamRef.current = stream;

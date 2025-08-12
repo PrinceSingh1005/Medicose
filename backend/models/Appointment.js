@@ -58,6 +58,13 @@ const appointmentSchema = mongoose.Schema({
     timestamps: true,
 });
 
+// In your Appointment model file (e.g., models/Appointment.js)
+appointmentSchema.index(
+  { doctorProfile: 1, appointmentDate: 1, appointmentTime: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: ['pending', 'confirmed'] } } }
+);
+
+
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
 module.exports = Appointment;
