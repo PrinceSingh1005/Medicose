@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Prescription = require('../models/Prescription');
 const { isValidTimeSlot } = require('../utils/timeUtils');
 const { sendAppointmentConfirmation } = require('../services/emailService');
-const { emitSocketEvent } = require('../config/socket');
+const { emitToUser } = require('../config/socket');
 
 const getAppointmentById = asyncHandler(async (req, res) => {
     const appointment = await Appointment.findById(req.params.id)
@@ -29,10 +29,6 @@ const getAppointmentById = asyncHandler(async (req, res) => {
     res.json(appointment);
 });
 
-// Helper for emitting to a specific user (by userId)
-const emitToUser = (userId, event, data) => {
-    emitSocketEvent(userId.toString(), event, data);
-};
 
 // @desc    Book a new appointment
 // @route   POST /api/appointments
@@ -118,6 +114,8 @@ const bookAppointment = asyncHandler(async (req, res) => {
         status: 'pending',
         paymentStatus: doctorProfile.fees > 0 ? 'pending' : 'paid',
     });
+    console.log("BOOK APPOINTMENT API HIT:", req.user._id, new Date().toISOString());
+
     res.status(201).json({
         message: 'Appointment booked successfully',
         appointmentId: appointment._id,
@@ -167,59 +165,56 @@ const getDoctorAppointments = asyncHandler(async (req, res) => {
 
 // In updateAppointmentStatus, make sure to check if doctor.user is populated correctly:
 const updateAppointmentStatus = asyncHandler(async (req, res) => {
-    const { status } = req.body;
-    const validStatuses = ['confirmed', 'cancelled', 'completed'];
+  const { status } = req.body;
+  const validStatuses = ['confirmed', 'cancelled', 'completed'];
 
-    if (!validStatuses.includes(status)) {
-        res.status(400);
-        throw new Error('Invalid status value');
-    }
+  // Validate status input
+  if (!validStatuses.includes(status)) {
+    res.status(400);
+    throw new Error('Invalid status value');
+  }
 
-    const appointment = await Appointment.findById(req.params.id)
-        .populate({
-            path: 'doctor',
-            populate: { path: 'user' }
-        })
-        .populate('patient');
+  // Find appointment with all required data populated
+  const appointment = await Appointment.findById(req.params.id)
+    .populate('doctor', 'name email')          // doctor = User
+    .populate('patient', 'name email')         // patient = User
+    .populate('doctorProfile');                // optional extra doctor info
 
-    if (!appointment) {
-        res.status(404);
-        throw new Error('Appointment not found');
-    }
+  if (!appointment) {
+    res.status(404);
+    throw new Error('Appointment not found');
+  }
 
-    if (!appointment.doctor || !appointment.doctor.user) {
-        res.status(500);
-        throw new Error('Invalid doctor data linked to appointment');
-    }
+  // Authorization: only the doctor who owns this appointment can update it
+  if (appointment.doctor._id.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to update this appointment');
+  }
 
-    if (appointment.doctor.user._id.toString() !== req.user._id.toString()) {
-        res.status(403);
-        throw new Error('Not authorized to update this appointment');
-    }
+  // Validate allowed transitions
+  if (status === 'completed' && appointment.status !== 'confirmed') {
+    res.status(400);
+    throw new Error('Only confirmed appointments can be marked as completed');
+  }
 
-    // Validate transition rules as before
-    if (status === 'completed' && appointment.status !== 'confirmed') {
-        res.status(400);
-        throw new Error('Only confirmed appointments can be marked as completed');
-    }
+  // Update status and save
+  appointment.status = status;
+  const updatedAppointment = await appointment.save();
 
-    appointment.status = status;
-    const updatedAppointment = await appointment.save();
+  // Emit socket updates
+  emitToUser(appointment.patient._id, 'appointment:updated', {
+    appointmentId: appointment._id,
+    newStatus: status,
+    doctorName: appointment.doctor.name,
+  });
 
-    // Emit socket updates
-    emitToUser(appointment.patient._id, 'appointment:updated', {
-        appointmentId: appointment._id,
-        newStatus: status,
-        doctorName: appointment.doctor.user.name
-    });
+  emitToUser(appointment.doctor._id, 'appointment:updated', {
+    appointmentId: appointment._id,
+    newStatus: status,
+    patientName: appointment.patient.name,
+  });
 
-    emitToUser(appointment.doctor.user._id, 'appointment:updated', {
-        appointmentId: appointment._id,
-        newStatus: status,
-        patientName: appointment.patient.name
-    });
-
-    res.json(updatedAppointment);
+  res.json(updatedAppointment);
 });
 
 // @desc    Create a prescription for a completed appointment

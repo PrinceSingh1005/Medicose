@@ -118,7 +118,7 @@ function VideoCallPage() {
             if (!SOCKET_SERVER_URL) { setErrorMessage("Configuration error: Socket URL not set."); setCallStatus('error'); setApptLoading(false); return; }
             try {
 
-                 // 1. Fetch appointment details, including the new `meetingStatus`
+                // 1. Fetch appointment details, including the new `meetingStatus`
                 const { data: appt } = await axios.get(`/appointments/${appointmentId}`);
                 setAppointmentDetails(appt);
 
@@ -132,7 +132,7 @@ function VideoCallPage() {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 setLocalStream(stream);
                 localStreamRef.current = stream;
-                
+
                 const isPatient = userInfo.role === 'patient' && appt.patient._id === userInfo._id;
                 const isDoctor = userInfo.role === 'doctor' && appt.doctor._id === userInfo._id;
 
@@ -173,13 +173,13 @@ function VideoCallPage() {
                 socketRef.current.disconnect();
             }
         };
-        // ** THE FIX IS HERE: `localStream` has been removed from this array to break the loop. **
+        
     }, [appointmentId, userInfo, createPeerConnection]);
 
     if (apptLoading) return <LoadingSpinner />;
     if (errorMessage && callStatus === 'error') return <Message variant="danger">{errorMessage}</Message>;
 
-    
+
     if (callStatus === 'ended') {
         return (
             <div className="text-center p-10">
@@ -190,7 +190,7 @@ function VideoCallPage() {
             </div>
         );
     }
-    
+
     const isDoctor = userInfo.role === 'doctor';
     const remoteUserName = isDoctor ? appointmentDetails?.patient?.name : `Dr. ${appointmentDetails?.doctor?.name}`;
 
@@ -239,7 +239,7 @@ function VideoCallPage() {
                 </div>
             </div>
             <div className="call-controls mt-4 text-center">
-                 <button onClick={handleLeaveMeeting} className="btn-danger">
+                <button onClick={handleLeaveMeeting} className="btn-danger">
                     Leave Meeting
                 </button>
             </div>

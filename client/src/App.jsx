@@ -18,12 +18,14 @@ import CreatePrescriptionPage from './pages/CreatePrescriptionPage';
 import DoctorPrescriptionsPage from './pages/DoctorPrescriptionsPage';
 import Footer from './components/Footer';
 import AIChatPage from './pages/AIChatPage';
-
+import DoctorAppointment from './pages/DoctorAppointment';
+import PatientDetailsForDoctorPage from './pages/PatientDetailsForDoctorPage';
+import DoctorPatientsPage from './pages/DoctorPatientsPage';
 const App = () => {
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
-        <Navbar />
+        {/* <Navbar /> */}
         <main className="">
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -32,13 +34,14 @@ const App = () => {
             <Route path="/doctors" element={<DoctorSearchPage />} />
             <Route path="/doctors/:id" element={<DoctorDetailsPage />} />
             <Route path="/ai-chat" element={<AIChatPage />} />
-             {/* Private Routes for Patients */}
+            {/* Private Routes for Patients */}
             <Route element={<PrivateRoute allowedRoles={['patient']} />} >
               <Route path="/patient/dashboard" element={<PatientDashboard />} />
               <Route path="/book-appointment/:doctorId" element={<AppointmentBookingPage />} />
               <Route path="/video-call/:appointmentId" element={<VideoCallPage />} />
               <Route path="/prescriptions/:prescriptionId" element={<PrescriptionPage />} />
               <Route path="/patient/profile" element={<ProfilePage />} />
+             
             </Route>
 
             {/* Private Routes for Doctors */}
@@ -47,7 +50,10 @@ const App = () => {
               <Route path="/doctor/profile" element={<ProfilePage />} />
               <Route path="/doctor/video-call/:appointmentId" element={<VideoCallPage />} />
               <Route path="/doctor/create-prescription/:appointmentId" element={<CreatePrescriptionPage />} />
+              <Route path="/doctor/appointments" element={<DoctorAppointment />} />
               <Route path="/doctor/prescriptions" element={<DoctorPrescriptionsPage />} />
+               <Route path="/doctor/patients" element={<DoctorPatientsPage />} />
+              <Route path="/doctor/patients/:patientId" element={<PatientDetailsForDoctorPage />} />
             </Route>
 
             {/* Private Routes for Admin */}

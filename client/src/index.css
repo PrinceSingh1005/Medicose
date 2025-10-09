@@ -55,3 +55,5 @@
 .delay-300 { animation-delay: 0.3s; }
 /* Add more delays as needed */
 
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

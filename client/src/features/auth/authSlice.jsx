@@ -1,13 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from '../../api/axios'; // Use your configured axios instance
 
-// Get user info from localStorage
-const userInfoFromStorage = localStorage.getItem('userInfo')
-  ? JSON.parse(localStorage.getItem('userInfo'))
+const userInfoFromStorage = localStorage.getItem('userInfo');
+
+// Check if the retrieved value is not the string "undefined" before parsing
+const parsedUserInfo = userInfoFromStorage && userInfoFromStorage !== "undefined"
+  ? JSON.parse(userInfoFromStorage)
   : null;
 
 const initialState = {
-  userInfo: userInfoFromStorage,
+  userInfo: parsedUserInfo,
   profile: null, // To store detailed user profile (patient/doctor/admin)
   loading: false,
   error: null,
@@ -29,8 +31,13 @@ export const register = createAsyncThunk(
         { name, email, password, role },
         config
       );
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      return data;
+      if (data && data.token) {
+        localStorage.setItem('userInfo', JSON.stringify(data));
+        return data;
+      }
+      else {
+        throw new Error('Invalid registration response from server.');
+      }
     } catch (error) {
       const message =
         error.response && error.response.data.message
@@ -55,8 +62,13 @@ export const login = createAsyncThunk(
         { email, password },
         config
       );
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      return data;
+      if (data && data.token) {
+        localStorage.setItem('userInfo', JSON.stringify(data));
+        return data;
+      }
+      else {
+        throw new Error('Invalid login response from server.');
+      }
     } catch (error) {
       const message =
         error.response && error.response.data.message
@@ -115,9 +127,42 @@ export const updateProfile = createAsyncThunk(
       };
       const { data } = await axios.put('/auth/profile', userData, config);
       // Update userInfo in localStorage if relevant fields change (e.g., name, email)
-      const updatedUserInfo = { ...userInfo, name: data.name, email: data.email };
-      localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+      if (data) {
+        const updatedUserInfo = { ...userInfo, name: data.name, email: data.email };
+        localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+      }
       return data;
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return rejectWithValue(message);
+    }
+  }
+);
+
+export const updateProfilePhoto = createAsyncThunk(
+  'auth/updateProfilePhoto',
+  async ({ doctorId, formData }, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } } = getState();
+      if (!userInfo || !userInfo.token) {
+        return rejectWithValue('No authentication token found.');
+      }
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      const { data } = await axios.post(`/doctors/${doctorId}/uploadProfilePhoto`, formData, config);
+      if (data && data.user) {
+          localStorage.setItem('userInfo', JSON.stringify(data.user));
+          return data.user;
+      }
+      return rejectWithValue('User data not returned from server.');
     } catch (error) {
       const message =
         error.response && error.response.data.message
@@ -211,6 +256,21 @@ const authSlice = createSlice({
         state.profile = { ...state.profile, ...action.payload };
       })
       .addCase(updateProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.success = false;
+      })
+      .addCase(updateProfilePhoto.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = false;
+      })
+      .addCase(updateProfilePhoto.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
+        state.userInfo = action.payload;
+      })
+      .addCase(updateProfilePhoto.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.success = false;

@@ -1,170 +1,281 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import axios from '../api/axios';
-import LoadingSpinner from '../components/LoadingSpinner';
-import Message from '../components/Message';
-import { Link } from 'react-router-dom';
-import { CalendarDaysIcon, CheckCircleIcon, XCircleIcon, VideoCameraIcon, ClipboardDocumentIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+// frontend/src/pages/DoctorDashboard.jsx
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import axios from "../api/axios";
 
-function DoctorDashboard() {
+import {
+  DollarSign,
+  Users,
+  Calendar,
+  FileText,
+  Clock,
+  UserCheck,
+  Activity,
+} from "lucide-react";
+
+import StatCard from "../components/doctor/StatCard";
+import PatientCard from "../components/doctor/PatientCard";
+import AppointmentCard from "../components/doctor/AppointmentCard";
+import Header from "../components/doctor/Header";
+import LoadingSpinner from "../components/LoadingSpinner";
+import Message from "../components/Message";
+import Sidebar from "../components/Sidebar";
+import { Link } from "react-router-dom";
+
+const DoctorDashboard = () => {
   const { userInfo } = useSelector((state) => state.auth);
+
+  const [stats, setStats] = useState(null);
+  const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get('/appointments/doctor');
-      console.log(data);
-      setAppointments(data);
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (userInfo && userInfo.role === 'doctor') {
-      fetchAppointments();
-    }
-  }, [userInfo]);
 
   const handleUpdateStatus = async (appointmentId, status) => {
     try {
       await axios.put(`/appointments/${appointmentId}/status`, { status });
-      fetchAppointments(); // Re-fetch appointments after update
+      // refresh data
+      const apptsRes = await axios.get('/appointments/doctor');
+      setAppointments(apptsRes.data);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     }
   };
 
+  // Fetch Dashboard Data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        const [statsRes, apptsRes, presRes, patientsRes] = await Promise.all([
+          axios.get("/doctors/stats"),
+          axios.get("/appointments/doctor"),
+          axios.get("/doctors/prescriptions"),
+          axios.get("/doctors/patients"),
+        ]);
+
+        setStats([
+          {
+            title: "Total Earnings",
+            value: `$${statsRes.data?.yearlyEarnings || 0}`, 
+            change: "+12.5% from last month",
+            changeType: "positive",
+            icon: DollarSign,
+            gradient: "primary",
+          },
+          {
+            title: "Total Patients",
+            value: String(patientsRes.data?.length || 0), 
+            change: "+8.2% from last month",
+            changeType: "positive",
+            icon: Users,
+            gradient: "success",
+          },
+          {
+            title: "Appointments This Week",
+            value: String(apptsRes.data?.length || 0), 
+            change: "Ongoing",
+            changeType: "neutral",
+            icon: Calendar,
+            gradient: "warning",
+          },
+          {
+            title: "Prescriptions",
+            value: String(presRes.data?.length || 0),
+            change: "+ Recent Issued",
+            changeType: "positive",
+            icon: FileText,
+            gradient: "primary",
+          },
+        ]);
+
+        setPatients(patientsRes.data);
+        setAppointments(apptsRes.data);
+        setPrescriptions(presRes.data);
+        setError(null);
+      } catch (err) {
+        setError(err.response?.data?.message || err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userInfo) fetchDashboardData();
+  }, [userInfo]);
+
   if (loading) return <LoadingSpinner />;
-  if (error) return <Message type="error">{error}</Message>;
-  if (!userInfo || userInfo.role !== 'doctor') return <Message type="error">Access Denied</Message>;
+  if (error) return <Message variant="danger">{error}</Message>;
 
   return (
-    <div className="py-8">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
-        Welcome, Dr. {userInfo.name}!
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900">
+      <Header userInfo={userInfo} appointments={appointments} handleUpdateStatus={handleUpdateStatus} />
+      <div className="flex">
+        <Sidebar />
+        <main className="lg:ml-64 pt-20 px-8">
+          <div className="max-w-7xl mx-auto space-y-10">
+            {/* Welcome */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-gray-800">
+                Good morning, {userInfo?.name || "Doctor"}!
+              </h1>
+              <p className="text-gray-500">
+                Here’s what’s happening with your practice today.
+              </p>
+            </div>
 
-      <div className="bg-card p-6 rounded-xl shadow-lg mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center">
-          <CalendarDaysIcon className="h-7 w-7 mr-2 text-primary" /> Your Appointments
-        </h2>
-        {appointments.length === 0 ? (
-          <Message type="info">You have no appointments scheduled.</Message>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-border">
-                {appointments.map((appt) => (
-                  <tr key={appt._id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {appt.patient.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(appt.appointmentDate).toLocaleDateString()} at {appt.appointmentTime}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {appt.consultationType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${appt.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          appt.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            appt.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                              'bg-red-100 text-red-800'
-                        }`}>
-                        {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {appt.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleUpdateStatus(appt._id, 'confirmed')}
-                              className="text-green-600 hover:text-green-900"
-                              title="Confirm Appointment"
-                            >
-                              <CheckCircleIcon className="h-6 w-6" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(appt._id, 'rejected')}
-                              className="text-red-600 hover:text-red-900"
-                              title="Reject Appointment"
-                            >
-                              <XCircleIcon className="h-6 w-6" />
-                            </button>
-                          </>
-                        )}
-                        {appt.status === 'confirmed' && appt.consultationType === 'video' && (
-                          <Link
-                            to={`/doctor/video-call/${appt._id}`} // Doctor can also join the call
-                            className="text-primary hover:text-indigo-700"
-                            title="Join Video Call"
-                          >
-                            <VideoCameraIcon className="h-6 w-6" />
-                          </Link>
-                        )}
-                        {appt.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleUpdateStatus(appt._id, 'completed')}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Mark as Completed"
-                          >
-                            <ClipboardDocumentIcon className="h-6 w-6" />
-                          </button>
-                        )}
-                        {appt.status === 'completed' && (
-                          <Link
-                            to={`/doctor/create-prescription/${appt._id}`} // Link to a prescription creation page
-                            className="text-purple-600 hover:text-purple-900"
-                            title="Create Prescription"
-                          >
-                            <ClipboardDocumentListIcon className="h-6 w-6" />
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats &&
+                stats.map((stat, index) => (
+                  <StatCard key={index} {...stat} />
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+            </div>
 
-      {/* Quick Links */}
-      <div className="mt-8 text-center">
-        <Link to="/doctor/profile" className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md transition">
-          Update Profile
-        </Link>
-        {/* Add more links like "View Prescriptions Created" */}
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Patients */}
+              <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow col-span-1">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-primary" />
+                    Recent Patients
+                  </h2>
+                  <button className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {patients.length > 0 ? (
+                    patients.slice(0, 4).map((patient, index) => (
+                      <PatientCard
+                        key={index}
+                        name={patient.name}
+                        age={patient.age}
+                        email={patient.email}
+                        lastVisit={patient.lastVisit || "N/A"}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No patients found.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Appointments */}
+              <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow col-span-1 lg:col-span-2">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Upcoming Appointments
+                  </h2>
+                  <Link to="/doctor/appointments" className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                    View All Appointments
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {appointments.length > 0 ? (
+                    appointments.slice(0, 4).map((appt, index) => (
+                      <AppointmentCard
+                        key={index}
+                        appt={appt}
+                        handleUpdateStatus={handleUpdateStatus}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No upcoming appointments.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Prescriptions */}
+            <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Recent Prescriptions
+                </h2>
+                <Link to="/doctor/prescriptions" className="px-3 py-1 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                  View
+                </Link>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                        Patient
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                        Medication
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                        Issued Date
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {prescriptions.length > 0 ? (
+                      prescriptions.slice(0, 5).map((pres, index) => (
+                        <tr
+                          key={index}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-4 px-4 text-sm font-medium text-gray-800">
+                            {pres.patient?.name}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-500">
+                            {pres.medication || "N/A"}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-500">
+                            {new Date(pres.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-4 px-4">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pres.status === "Active"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-200 text-gray-600"
+                                }`}
+                            >
+                              {pres.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Link to="/doctor/prescriptions" className="px-3 py-1 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="py-4 px-4 text-center text-gray-500"
+                        >
+                          No prescriptions found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
-}
+};
 
 export default DoctorDashboard;

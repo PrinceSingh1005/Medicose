@@ -1,0 +1,25 @@
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+.react-calendar__tile {
+  padding: 0.75rem 0 !important;
+  font-size: 0.875rem !important;
+}
+
+.react-calendar__tile--active {
+  background: #3b82f6 !important; /* Tailwind blue-500 */
+  color: white !important;
+  border-radius: 0.5rem !important;
+}
+
+.react-calendar__tile--now {
+  background: #facc15 !important; /* Tailwind yellow-400 */
+  border-radius: 0.5rem !important;
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: #ef4444 !important; /* Tailwind red-500 */
+}

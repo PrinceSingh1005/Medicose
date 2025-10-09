@@ -35,16 +35,10 @@ function AppointmentBookingPage() {
             navigate('/login');
             return;
         }
-
-        // Check if we have doctor data from route state (coming from DoctorDetailsPage)
         if (routeState?.doctorData) {
             setIsInitialized(true);
             return;
         }
-
-        // Otherwise fetch from API if:
-        // 1. We don't have doctor data OR
-        // 2. The doctor ID doesn't match
         if (doctorProfileId && (!doctor || doctor._id !== doctorProfileId)) {
             console.log('Fetching doctor with ID:', doctorProfileId);
             dispatch(fetchDoctorDetails(doctorProfileId))

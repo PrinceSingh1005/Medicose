@@ -90,7 +90,7 @@ function DoctorDetailsPage() {
                 {/* Header Section */}
                 <div className="p-8 bg-primary text-white flex flex-col md:flex-row items-center">
                     <img
-                        src={doctor.imageUrl || `https://ui-avatars.com/api/?name=${doctor.user?.name || 'Doctor'}&background=FFFFFF&color=4F46E5&size=128`}
+                        src={doctor.profilePhoto || `https://ui-avatars.com/api/?name=${doctor.user?.name || 'Doctor'}&background=FFFFFF&color=4F46E5&size=128`}
                         alt={doctor.user?.name || 'Doctor'}
                         className="w-32 h-32 rounded-full border-4 border-white object-cover mb-4 md:mb-0 md:mr-8"
                     />
