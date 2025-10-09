@@ -3,6 +3,45 @@ const Appointment = require('../models/Appointment');
 const Prescription = require('../models/Prescription');
 const Review = require('../models/Review');
 const User = require('../models/User'); // To fetch doctor names for prescriptions/appointments
+const PatientProfile = require('../models/PatientProfile');
+
+// @desc    Get the profile for the logged-in patient
+// @route   GET /api/patients/profile/me
+// @access  Private/Patient
+const getMyPatientProfile = asyncHandler(async (req, res) => {
+    const profile = await PatientProfile.findOne({ user: req.user._id });
+
+    if (profile) {
+        res.json(profile);
+    } else {
+        res.status(404);
+        throw new Error('Patient profile not found.');
+    }
+});
+
+// @desc    Update the profile for the logged-in patient
+// @route   PUT /api/patients/profile/me
+// @access  Private/Patient
+const updatePatientProfile = asyncHandler(async (req, res) => {
+    const profile = await PatientProfile.findOne({ user: req.user._id });
+
+    if (profile) {
+        profile.dateOfBirth = req.body.dateOfBirth || profile.dateOfBirth;
+        profile.gender = req.body.gender || profile.gender;
+        profile.address = req.body.address || profile.address;
+        profile.city = req.body.city || profile.city;
+        profile.state = req.body.state || profile.state;
+        profile.country = req.body.country || profile.country;
+        profile.phone = req.body.phone || profile.phone;
+        
+        const updatedProfile = await profile.save();
+        res.json(updatedProfile);
+    } else {
+        res.status(404);
+        throw new Error('Patient profile not found.');
+    }
+});
+
 
 // @desc    Get patient's appointments
 // @route   GET /api/patients/appointments
@@ -15,8 +54,8 @@ const getPatientAppointments = asyncHandler(async (req, res) => {
 
     // Find appointments for the logged-in patient
     const appointments = await Appointment.find({ patient: req.user._id })
-        .populate('doctor', 'name email') // Populate doctor's basic info
-        .populate('doctorProfile', 'specialization fees'); // Populate doctor's profile info
+        .populate('doctor', 'name email profilePhoto') 
+        .populate('doctorProfile', 'specialization fees'); 
 
     res.json(appointments);
 });
@@ -32,8 +71,9 @@ const getPatientPrescriptions = asyncHandler(async (req, res) => {
 
     // Find prescriptions for the logged-in patient
     const prescriptions = await Prescription.find({ patient: req.user._id })
-        .populate('doctor', 'name email') // Populate doctor's basic info
-        .populate('appointment', 'appointmentDate appointmentTime'); // Populate appointment details
+        .populate('patient', 'name email')
+        .populate('doctor', 'name email') 
+        .populate('appointment', 'appointmentDate appointmentTime');
 
     res.json(prescriptions);
 });
@@ -99,4 +139,6 @@ module.exports = {
     getPatientAppointments,
     getPatientPrescriptions,
     submitReview,
+    getMyPatientProfile,
+    updatePatientProfile
 };

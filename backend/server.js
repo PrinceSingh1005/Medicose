@@ -5,6 +5,7 @@ const http = require('http');
 const connectDB = require('./config/db');
 const { initSocket } = require('./config/socket');
 const path = require('path');
+const fs = require('fs');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -32,6 +33,13 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+  console.log(`Created directory: ${uploadsDir}`);
+}
+
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);
@@ -39,6 +47,7 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/uploads', express.static(uploadsDir));
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

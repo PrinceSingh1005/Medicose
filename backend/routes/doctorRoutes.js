@@ -1,19 +1,18 @@
-// In backend/routes/doctorRoutes.js
-
 const express = require('express');
-// Correctly import 'getAllDoctors' instead of 'getDoctors'
-const { getAllDoctors, getDoctorById, updateDoctorProfile, getDoctorPrescriptions,getMyDoctorProfile } = require('../controllers/doctorController');
+const { getAllDoctors, getDoctorById, updateDoctorProfile, getDoctorPrescriptions, getMyDoctorProfile, getDoctorStats, getDoctorPatients, getPatientHistoryForDoctor, uploadProfilePhoto } = require('../controllers/doctorController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 const router = express.Router();
 
-// This now uses the correct function name and will work as intended
 router.get('/', getAllDoctors);
+
+router.get('/stats', protect, authorizeRoles('doctor'), getDoctorStats);
 router.get('/profile/me', protect, authorizeRoles('doctor'), getMyDoctorProfile);
-
-router.get('/:id', getDoctorById); 
-
-// Private doctor routes
 router.put('/profile', protect, authorizeRoles('doctor'), updateDoctorProfile);
 router.get('/prescriptions', protect, authorizeRoles('doctor'), getDoctorPrescriptions);
+router.get('/patients', protect, authorizeRoles('doctor'), getDoctorPatients);
+router.get('/patients/:patientId', protect, authorizeRoles('doctor'), getPatientHistoryForDoctor);
 
+router.get('/:id', getDoctorById);
+router.post('/:id/uploadProfilePhoto', protect, authorizeRoles('doctor'), upload.single('profilePhoto'), uploadProfilePhoto);
 module.exports = router;

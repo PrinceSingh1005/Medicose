@@ -22,9 +22,11 @@ const userSchema = mongoose.Schema({
     },
     isVerified: {
         type: Boolean,
-        default: false, // For doctors, requires admin verification
+        default: false, 
     },
-    // NEW FIELD: Reference to DoctorProfile for 'doctor' role users
+    profilePhoto:{
+        type: String,
+    },
     doctorProfile: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'DoctorProfile', 

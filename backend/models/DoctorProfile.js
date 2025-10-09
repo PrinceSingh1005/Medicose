@@ -66,6 +66,9 @@ const doctorProfileSchema = mongoose.Schema({
         type: Number,
         default: 0,
     },
+    profilePhoto: {
+        type: String, 
+    },
 }, {
     timestamps: true,
 });

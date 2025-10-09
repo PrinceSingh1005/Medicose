@@ -26,7 +26,9 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     if (user) {
-        // If user is a doctor, create an empty doctor profile for them
+        if (role === 'patient') {
+            await PatientProfile.create({ user: user._id });
+        }
         if (user.role === 'doctor') {
             const doctorProfile = await DoctorProfile.create({
                 user: user._id,
@@ -40,6 +42,7 @@ const registerUser = asyncHandler(async (req, res) => {
                 country: 'Not Specified',
                 phone: 'Not Specified',
                 medicalLicense: 'Not Specified', // Will be updated later
+                profilePhoto: '', // Will be updated later
             });
             // Link the created doctorProfile to the user
             user.doctorProfile = doctorProfile._id;
@@ -78,6 +81,7 @@ const loginUser = asyncHandler(async (req, res) => {
             role: user.role,
             isVerified: user.isVerified,
             token: generateToken(user._id),
+            profilePhoto: user.profilePhoto,
         });
     } else {
         res.status(401); // Unauthorized
@@ -99,6 +103,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
             email: user.email,
             role: user.role,
             isVerified: user.isVerified,
+            profilePhoto: user.profilePhoto,
         };
 
         // If user is a doctor, fetch their profile details and populate the doctorProfile field
@@ -149,6 +154,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             email: updatedUser.email,
             role: updatedUser.role,
             isVerified: updatedUser.isVerified,
+            profilePhoto: updatedUser.profilePhoto,
             token: generateToken(updatedUser._id),
         });
     } else {
