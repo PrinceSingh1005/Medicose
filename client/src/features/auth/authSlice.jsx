@@ -158,9 +158,10 @@ export const updateProfilePhoto = createAsyncThunk(
         },
       };
       const { data } = await axios.post(`/doctors/${doctorId}/uploadProfilePhoto`, formData, config);
-      if (data && data.user) {
-          localStorage.setItem('userInfo', JSON.stringify(data.user));
-          return data.user;
+      if (data && data.profilePhoto) {
+          const updatedUserInfo = { ...userInfo, profilePhoto: data.profilePhoto };
+          localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+          return updatedUserInfo;
       }
       return rejectWithValue('User data not returned from server.');
     } catch (error) {
@@ -173,6 +174,39 @@ export const updateProfilePhoto = createAsyncThunk(
   }
 );
 
+
+export const updatePatientProfilePhoto = createAsyncThunk(
+  'auth/updatePatientProfilePhoto',
+  async (formData, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } } = getState();
+      if (!userInfo || !userInfo.token) {
+        return rejectWithValue('No authentication token found.');
+      }
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+       // Corrected API endpoint
+      const { data } = await axios.post(`/api/patients/profile/photo`, formData, config);
+      if (data && data.profilePhoto) {
+        const updatedUserInfo = { ...userInfo, profilePhoto: data.profilePhoto };
+        localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+        return updatedUserInfo;
+      }
+      return rejectWithValue('Profile photo URL not returned from server.');
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return rejectWithValue(message);
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -263,7 +297,6 @@ const authSlice = createSlice({
       .addCase(updateProfilePhoto.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.success = false;
       })
       .addCase(updateProfilePhoto.fulfilled, (state, action) => {
         state.loading = false;
@@ -273,7 +306,19 @@ const authSlice = createSlice({
       .addCase(updateProfilePhoto.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.success = false;
+      })
+      .addCase(updatePatientProfilePhoto.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updatePatientProfilePhoto.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
+        state.userInfo = action.payload;
+      })
+      .addCase(updatePatientProfilePhoto.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

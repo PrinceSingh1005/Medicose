@@ -4,6 +4,8 @@ const Prescription = require('../models/Prescription');
 const Review = require('../models/Review');
 const User = require('../models/User'); // To fetch doctor names for prescriptions/appointments
 const PatientProfile = require('../models/PatientProfile');
+const cloudinary = require('../config/cloudinary');
+const fs = require('fs').promises;
 
 // @desc    Get the profile for the logged-in patient
 // @route   GET /api/patients/profile/me
@@ -134,11 +136,47 @@ const submitReview = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Upload profile photo for logged-in patient
+// @route   POST /api/patients/profile/photo
+// @access  Private/Patient
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+    try {
+        const patientProfile = await PatientProfile.findOne({ user: req.user._id });
+        if (!patientProfile) {
+            res.status(404);
+            throw new Error('Patient profile not found');
+        }
+
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'patient_profiles',
+            transformation: [{ width: 200, height: 200, crop: 'fill' }],
+        });
+
+        await fs.unlink(req.file.path);
+
+        patientProfile.profilePhoto = result.secure_url;
+        await patientProfile.save();
+
+        const user = await User.findById(req.user._id);
+        if (user) {
+            user.profilePhoto = result.secure_url;
+            await user.save();
+        }
+
+        res.json({ message: 'Profile picture uploaded successfully', profilePhoto: user.profilePhoto });
+
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error uploading profile picture');
+    }
+});
 
 module.exports = {
     getPatientAppointments,
     getPatientPrescriptions,
     submitReview,
     getMyPatientProfile,
-    updatePatientProfile
+    updatePatientProfile,
+    uploadProfilePhoto
 };
+

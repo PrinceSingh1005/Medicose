@@ -39,10 +39,17 @@ const getAllDoctors = asyncHandler(async (req, res) => {
 // @access  Public
 // Example endpoint: GET /api/doctors/user/:userId
 const getDoctorById = asyncHandler(async (req, res) => {
-    const doctor = await DoctorProfile.findById(req.params.id)
+    let doctor = await DoctorProfile.findById(req.params.id)
         .populate('user', 'name email role isVerified profilePhoto');
 
+    // If not found by DoctorProfile _id, try finding by user _id
+    if (!doctor) {
+        doctor = await DoctorProfile.findOne({ user: req.params.id })
+            .populate('user', 'name email role isVerified profilePhoto');
+    }
+
     if (doctor && doctor.user?.role === 'doctor') {
+        console.log(doctor);
         res.json(doctor);
     } else {
         res.status(404);
@@ -250,10 +257,7 @@ const uploadProfilePhoto = asyncHandler(async (req, res) => {
             res.status(404);
             throw new Error('Doctor profile not found');
         }
-        if (doctorProfile.user.toString() !== req.user._id.toString()) {
-            res.status(403);
-            throw new Error('Not authorized to update this profile');
-        }
+
         const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'doctor_profiles',
             transformation: [{ width: 200, height: 200, crop: 'fill' }],
