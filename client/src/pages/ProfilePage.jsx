@@ -13,8 +13,8 @@ function ProfilePage() {
   const fileInputRef = useRef(null);
 
   // --- Redux State ---
-  const { userInfo, loading: authLoading, error: authError } = useSelector((state) => state.auth);
-  const { loading: doctorLoading, error: doctorError } = useSelector((state) => state.doctors);
+  const { userInfo, loading: authLoading } = useSelector((state) => state.auth);
+  const { loading: doctorLoading } = useSelector((state) => state.doctors);
   const { profile: patientProfile, status: patientStatus } = useSelector((state) => state.patient);
 
   // --- Component State ---
@@ -64,7 +64,8 @@ function ProfilePage() {
             };
             setFormData(prev => ({ ...prev, ...displayData }));
           }
-        } catch (e) {
+        } catch (error) {
+          console.error(error);
           toast.error('Could not load your doctor profile');
         } finally {
           setPageLoading(false);

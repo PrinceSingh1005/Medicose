@@ -1,6 +1,6 @@
 // frontend/src/pages/DoctorDashboard.jsx
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "../api/axios";
 
 import {
@@ -21,14 +21,18 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import Message from "../components/Message";
 import Sidebar from "../components/Sidebar";
 import { Link } from "react-router-dom";
+import { fetchDoctorDetails } from "../features/doctor/doctorSlice";
 
 const DoctorDashboard = () => {
+  const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.auth);
+  const { selectedDoctor } = useSelector((state)=> state.doctors);
 
   const [stats, setStats] = useState(null);
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,6 +48,13 @@ const DoctorDashboard = () => {
       setError(err.response?.data?.message || err.message);
     }
   };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+  const closeSidebar = () =>{
+    setSidebarOpen(false);
+  }
 
   // Fetch Dashboard Data
   useEffect(() => {
@@ -61,7 +72,7 @@ const DoctorDashboard = () => {
         setStats([
           {
             title: "Total Earnings",
-            value: `$${statsRes.data?.yearlyEarnings || 0}`, 
+            value: `₹${statsRes.data?.yearlyEarnings || 0}`, 
             change: "+12.5% from last month",
             changeType: "positive",
             icon: DollarSign,
@@ -104,31 +115,45 @@ const DoctorDashboard = () => {
       }
     };
 
-    if (userInfo) fetchDashboardData();
-  }, [userInfo]);
+    if (userInfo) {
+      dispatch(fetchDoctorDetails(userInfo._id));
+      fetchDashboardData();
+    }
+  }, [userInfo,dispatch]);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <Message variant="danger">{error}</Message>;
 
+  const profileForHeader = {
+    name: selectedDoctor?.user?.name || userInfo?.name || "Doctor",
+    profilePhoto: selectedDoctor?.user?.profilePhoto || userInfo?.profilePhoto || "",
+    specialization: selectedDoctor?.specialization || "General Practitioner",
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900">
-      <Header userInfo={userInfo} appointments={appointments} handleUpdateStatus={handleUpdateStatus} />
+      <Header 
+        userInfo={profileForHeader} 
+        appointments={appointments} 
+        handleUpdateStatus={handleUpdateStatus} 
+        onMenuClick = {toggleSidebar}
+      />
       <div className="flex">
-        <Sidebar />
-        <main className="lg:ml-64 pt-20 px-8">
-          <div className="max-w-7xl mx-auto space-y-10">
+        <Sidebar isOpen = {sidebarOpen} onClose = {closeSidebar} />
+        <main className="flex-1 pt-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 lg:space-y-10">
             {/* Welcome */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-800">
+            <div className="space-y-2 px-2 sm:px-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
                 Good morning, {userInfo?.name || "Doctor"}!
               </h1>
-              <p className="text-gray-500">
-                Here’s what’s happening with your practice today.
+              <p className="text-sm sm:text-base text-gray-500">
+                Here's what's happening with your practice today.
               </p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
               {stats &&
                 stats.map((stat, index) => (
                   <StatCard key={index} {...stat} />
@@ -136,19 +161,19 @@ const DoctorDashboard = () => {
             </div>
 
             {/* Main Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {/* Patients */}
-              <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow col-span-1">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-primary" />
+              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white border border-gray-200 shadow-xs sm:shadow-sm hover:shadow-md transition-shadow col-span-1">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Recent Patients
                   </h2>
-                  <button className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                  <button className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
                     View All
                   </button>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {patients.length > 0 ? (
                     patients.slice(0, 4).map((patient, index) => (
                       <PatientCard
@@ -160,23 +185,26 @@ const DoctorDashboard = () => {
                       />
                     ))
                   ) : (
-                    <p className="text-gray-500">No patients found.</p>
+                    <p className="text-sm text-gray-500 text-center py-4">No patients found.</p>
                   )}
                 </div>
               </div>
 
               {/* Appointments */}
-              <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow col-span-1 lg:col-span-2">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-primary" />
+              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white border border-gray-200 shadow-xs sm:shadow-sm hover:shadow-md transition-shadow col-span-1 lg:col-span-2">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Upcoming Appointments
                   </h2>
-                  <Link to="/doctor/appointments" className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
-                    View All Appointments
+                  <Link 
+                    to="/doctor/appointments" 
+                    className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition"
+                  >
+                    View All
                   </Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {appointments.length > 0 ? (
                     appointments.slice(0, 4).map((appt, index) => (
                       <AppointmentCard
@@ -186,89 +214,98 @@ const DoctorDashboard = () => {
                       />
                     ))
                   ) : (
-                    <p className="text-gray-500">No upcoming appointments.</p>
+                    <p className="text-sm text-gray-500 text-center py-4 col-span-2">No upcoming appointments.</p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Prescriptions */}
-            <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
+            <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white border border-gray-200 shadow-xs sm:shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Recent Prescriptions
                 </h2>
-                <Link to="/doctor/prescriptions" className="px-3 py-1 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
+                <Link 
+                  to="/doctor/prescriptions" 
+                  className="px-2 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition"
+                >
                   View
                 </Link>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Patient
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Medication
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Issued Date
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {prescriptions.length > 0 ? (
-                      prescriptions.slice(0, 5).map((pres, index) => (
-                        <tr
-                          key={index}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-4 px-4 text-sm font-medium text-gray-800">
-                            {pres.patient?.name}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-500">
-                            {pres.medication || "N/A"}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-500">
-                            {new Date(pres.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 px-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pres.status === "Active"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-200 text-gray-600"
+              <div className="overflow-x-auto -mx-2 sm:mx-0">
+                <div className="min-w-full max-w-full">
+                  <table className="w-full border border-gray-200 rounded-lg overflow-hidden text-sm sm:text-base">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Patient
+                        </th>
+                        <th className="text-left py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Medication
+                        </th>
+                        <th className="text-left py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Date
+                        </th>
+                        <th className="text-left py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Status
+                        </th>
+                        <th className="text-left py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {prescriptions.length > 0 ? (
+                        prescriptions.slice(0, 5).map((pres, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-3 px-2 sm:py-4 sm:px-4 text-xs sm:text-sm font-medium text-gray-800 whitespace-nowrap">
+                              {pres.patient?.name}
+                            </td>
+                            <td className="py-3 px-2 sm:py-4 sm:px-4 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+                              {pres.medication || "N/A"}
+                            </td>
+                            <td className="py-3 px-2 sm:py-4 sm:px-4 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+                              {new Date(pres.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-2 sm:py-4 sm:px-4">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  pres.status === "Active"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-200 text-gray-600"
                                 }`}
-                            >
-                              {pres.status}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <Link to="/doctor/prescriptions" className="px-3 py-1 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition">
-                              View
-                            </Link>
+                              >
+                                {pres.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 sm:py-4 sm:px-4">
+                              <Link 
+                                to="/doctor/prescriptions" 
+                                className="px-2 py-1 text-xs sm:text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-primary hover:text-white transition whitespace-nowrap"
+                              >
+                                View
+                              </Link>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            className="py-4 px-4 text-center text-sm text-gray-500"
+                          >
+                            No prescriptions found.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="py-4 px-4 text-center text-gray-500"
-                        >
-                          No prescriptions found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

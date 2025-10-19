@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from 'https://esm.sh/@reduxjs/toolkit';
-import axios from 'https://esm.sh/axios';
+import axios from '../../api/axios';
 
 const initialState = {
   profile: null,
@@ -16,7 +16,7 @@ export const fetchPatientProfile = createAsyncThunk(
         headers: { Authorization: `Bearer ${userInfo.token}` },
       };
       // You might need to configure axios base URL globally
-      const { data } = await axios.get('/api/patients/profile/me', config);
+      const { data } = await axios.get('/patients/profile/me', config);
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Could not load patient profile.');

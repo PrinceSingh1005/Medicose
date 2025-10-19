@@ -12,12 +12,17 @@ const AppointmentCard = ({ appt, handleUpdateStatus }) => {
     <div className="p-4 border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:bg-gray-50 transition">
       <div className="flex justify-between items-center">
         {/* PATIENT INFO */}
-        <div>
-          <p className="font-semibold text-gray-800">{appt.patient?.name}</p>
-          <p className="text-sm text-gray-600">
-            {new Date(appt.appointmentDate).toLocaleDateString()} at{" "}
-            {appt.appointmentTime}
-          </p>
+        <div className="flex items-center gap-2">
+          <div>
+            <img src={appt.patient?.profilePhoto} alt={appt.patient?.name} />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-800">{appt.patient?.name}</p>
+            <p className="text-sm text-gray-600">
+              {new Date(appt.appointmentDate).toLocaleDateString()} at{" "}
+              {appt.appointmentTime}
+            </p>
+          </div>
 
           {/* STATUS BADGE */}
           <span

@@ -191,7 +191,7 @@ export const updatePatientProfilePhoto = createAsyncThunk(
         },
       };
        // Corrected API endpoint
-      const { data } = await axios.post(`/api/patients/profile/photo`, formData, config);
+      const { data } = await axios.post(`/patients/profile/photo`, formData, config);
       if (data && data.profilePhoto) {
         const updatedUserInfo = { ...userInfo, profilePhoto: data.profilePhoto };
         localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));

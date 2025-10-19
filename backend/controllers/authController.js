@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');
 const generateToken = require('../utils/generateToken');
+const PatientProfile = require('../models/PatientProfile');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register

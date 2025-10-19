@@ -12,7 +12,6 @@ function DoctorDetailsPage() {
     const dispatch = useDispatch();
 
     const { selectedDoctor: doctor, status, error } = useSelector((state) => state.doctors);
-    const { userInfo } = useSelector((state) => state.auth);
 
     console.log('Selected doctor from Redux store:', doctor);
 
@@ -143,7 +142,7 @@ function DoctorDetailsPage() {
                                     <FaMoneyBillWave className="text-primary mt-1 mr-3" size={20} />
                                     <span>
                                         <strong>Fee:</strong><br/>
-                                        ${doctor.fees || 0}
+                                        &#8377;{doctor.fees || 0}
                                     </span>
                                 </div>
                             </div>

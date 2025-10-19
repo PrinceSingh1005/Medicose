@@ -1,13 +1,38 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
-const NotificationDialog = ({ open, onClose, confirmedAppointments, handleUpdateStatus }) => {
+const NotificationDialog = ({
+  open,
+  onClose,
+  confirmedAppointments,
+  handleUpdateStatus,
+}) => {
+  const dialogRef = useRef(null);
+
+  // Close dialog when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dialogRef.current && !dialogRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
     <div
+      ref={dialogRef}
       style={{
         position: "absolute",
-        top: "40px",   // just below the bell icon
+        top: "40px", // just below the bell icon
         right: "0px", // aligned to the right edge of bell
         width: "280px",
         background: "#fff",
@@ -26,18 +51,9 @@ const NotificationDialog = ({ open, onClose, confirmedAppointments, handleUpdate
           marginBottom: "8px",
         }}
       >
-        <h4 style={{ margin: 0, fontSize: "16px" }}>confirmed Appointment Requests</h4>
-        <button
-          onClick={onClose}
-          style={{
-            background: "transparent",
-            border: "none",
-            fontSize: "16px",
-            cursor: "pointer",
-          }}
-        >
-          ✖
-        </button>
+        <h4 style={{ margin: 0, fontSize: "16px" }}>
+          Confirmed Appointment Requests
+        </h4>
       </div>
 
       {confirmedAppointments.length === 0 ? (
@@ -56,7 +72,13 @@ const NotificationDialog = ({ open, onClose, confirmedAppointments, handleUpdate
                 {appt.patient?.name} <br />
                 <small>{appt.appointmentTime}</small>
               </p>
-              <div style={{ marginTop: "6px", display: "flex", gap: "8px" }}>
+              <div
+                style={{
+                  marginTop: "6px",
+                  display: "flex",
+                  gap: "8px",
+                }}
+              >
                 <button
                   onClick={() => handleUpdateStatus(appt.id, "approved")}
                   style={{

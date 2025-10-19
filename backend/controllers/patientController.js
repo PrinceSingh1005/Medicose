@@ -155,14 +155,14 @@ const uploadProfilePhoto = asyncHandler(async (req, res) => {
         await fs.unlink(req.file.path);
 
         patientProfile.profilePhoto = result.secure_url;
-        await patientProfile.save();
-
+        
         const user = await User.findById(req.user._id);
         if (user) {
             user.profilePhoto = result.secure_url;
             await user.save();
         }
-
+        
+        await patientProfile.save();
         res.json({ message: 'Profile picture uploaded successfully', profilePhoto: user.profilePhoto });
 
     } catch (error) {

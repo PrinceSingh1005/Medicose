@@ -20,7 +20,7 @@ const DoctorCard = ({ doctor }) => (
         <strong>Experience:</strong> {doctor.experience} years
       </p>
       <p className="text-gray-600">
-        <strong>Fees:</strong> ${doctor.fees}
+        <strong>Fees:</strong> &#8377;{doctor.fees}
       </p>
       <p className="text-gray-600">
         <strong>Location:</strong> {doctor.address || 'Not specified'}
